@@ -223,9 +223,9 @@ export default function PricingSection() {
                 >
                   {/* Popular Pill */}
                   {isPop && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[11px] font-black tracking-widest px-4 py-1 rounded-full uppercase shadow-md shadow-red-600/30 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 fill-current" />
-                      <span>MOST POPULAR CHOICE</span>
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] sm:text-[11px] font-black tracking-wide px-3.5 py-1 rounded-full uppercase shadow-md shadow-red-600/30 flex items-center gap-1.5 whitespace-nowrap z-10">
+                      <Sparkles className="w-3 h-3 fill-current shrink-0" />
+                      <span>MOST POPULAR</span>
                     </div>
                   )}
 
