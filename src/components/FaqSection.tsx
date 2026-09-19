@@ -105,14 +105,14 @@ export default function FaqSection() {
           <div className="flex items-center gap-3">
             <a
               href="tel:18001234567"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 hover:text-red-600 font-bold text-xs shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 hover:text-slate-900 font-bold text-xs sm:text-sm shadow-2xs hover:shadow-xs transition-all cursor-pointer"
             >
               <PhoneCall className="w-3.5 h-3.5 text-red-600" />
               <span>Call Toll-Free</span>
             </a>
             <a
               href="#cta"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 font-bold text-xs shadow-xs shadow-red-600/30 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-bold text-xs sm:text-sm shadow-sm hover:shadow transition-all cursor-pointer"
             >
               <MessageCircle className="w-3.5 h-3.5" />
               <span>Chat on WhatsApp</span>

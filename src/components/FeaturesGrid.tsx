@@ -174,7 +174,7 @@ export default function FeaturesGrid() {
           </div>
           <a
             href="#cta"
-            className="px-6 py-3 rounded-xl bg-white text-red-600 hover:bg-red-50 font-bold text-sm shadow-md transition-colors whitespace-nowrap flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 rounded-lg bg-white text-red-600 hover:bg-red-50 font-bold text-sm shadow-sm hover:shadow transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer"
           >
             <span>Talk to ERP Solutions Architect</span>
             <ArrowRight className="w-4 h-4" />

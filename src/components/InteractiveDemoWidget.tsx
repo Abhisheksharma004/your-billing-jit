@@ -293,7 +293,7 @@ export default function InteractiveDemoWidget() {
               <button
                 type="button"
                 onClick={handleDownloadPreview}
-                className="flex-1 min-w-[160px] py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-red-600/30 transition-all cursor-pointer"
+                className="flex-1 min-w-[160px] py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm hover:shadow transition-all cursor-pointer"
               >
                 {invoiceDownloaded ? (
                   <>
@@ -311,7 +311,7 @@ export default function InteractiveDemoWidget() {
               <button
                 type="button"
                 onClick={handleDownloadPreview}
-                className="py-2.5 px-4 rounded-xl border border-slate-200 hover:border-red-300 text-slate-700 hover:text-red-600 font-bold text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 hover:text-slate-900 font-bold text-sm flex items-center gap-2 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
                 <span>Simulate WhatsApp Share</span>
@@ -402,7 +402,7 @@ export default function InteractiveDemoWidget() {
               {/* Button */}
               <a
                 href="#cta"
-                className="w-full block text-center py-3 px-5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold text-sm shadow-lg shadow-red-600/30 transition-all cursor-pointer"
+                className="w-full block text-center py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer"
               >
                 Claim Your Free 14-Day Full Access
               </a>

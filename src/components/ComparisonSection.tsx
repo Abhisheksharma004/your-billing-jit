@@ -124,7 +124,7 @@ export default function ComparisonSection() {
             </div>
             <a
               href="#cta"
-              className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
             >
               <span>Migrate Risk-Free</span>
               <ArrowRight className="w-4 h-4" />

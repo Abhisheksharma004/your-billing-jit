@@ -183,15 +183,15 @@ export default function Navbar() {
             <div className="hidden lg:flex items-center gap-3 shrink-0">
               <Link
                 href="/login"
-                className="px-4 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-bold text-sm transition-all duration-200 whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 hover:text-slate-900 font-bold text-sm shadow-xs hover:shadow transition-all duration-200 whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
               >
-                <LogIn className="w-4 h-4 text-red-600" />
+                <LogIn className="w-4 h-4 text-slate-600" />
                 <span>Login</span>
               </Link>
 
               <a
                 href="#cta"
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold text-sm shadow-md shadow-red-600/25 hover:shadow-lg hover:shadow-red-600/40 transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 group cursor-pointer"
+                className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 group cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Sign Up</span>
@@ -203,20 +203,20 @@ export default function Navbar() {
             <div className="flex xl:hidden items-center gap-2 shrink-0">
               <Link
                 href="/login"
-                className="px-3 py-2 text-xs font-bold border border-red-200 text-red-600 rounded-xl hover:bg-red-50 whitespace-nowrap"
+                className="px-3 py-2 text-xs font-bold border border-slate-300 hover:border-slate-400 bg-white text-slate-700 rounded-lg shadow-2xs hover:shadow-xs transition-all whitespace-nowrap"
               >
                 Login
               </Link>
               <a
                 href="#cta"
-                className="px-3.5 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-xs whitespace-nowrap"
+                className="px-3.5 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow transition-all whitespace-nowrap"
               >
                 Sign Up
               </a>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-xl border border-slate-200 text-slate-700 hover:text-red-600 hover:bg-red-50 focus:outline-none shrink-0 cursor-pointer ml-0.5"
+                className="p-2 rounded-lg border border-slate-200 text-slate-700 hover:text-red-600 hover:bg-red-50 focus:outline-none shrink-0 cursor-pointer ml-0.5"
                 aria-label="Toggle navigation menu"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -285,15 +285,15 @@ export default function Navbar() {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 flex items-center justify-center gap-1.5"
+                className="w-full text-center py-2.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 font-bold text-sm shadow-2xs hover:shadow-xs flex items-center justify-center gap-1.5 transition-all"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-4 h-4 text-slate-600" />
                 <span>Login</span>
               </Link>
               <a
                 href="#cta"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-bold text-sm shadow-md shadow-red-600/30 flex items-center justify-center gap-1.5"
+                className="w-full text-center py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow flex items-center justify-center gap-1.5 transition-all"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Sign Up Free</span>

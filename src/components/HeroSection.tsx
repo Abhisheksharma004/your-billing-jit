@@ -58,7 +58,7 @@ export default function HeroSection() {
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href="#cta"
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-red-600 via-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold text-base shadow-xl shadow-red-600/30 hover:shadow-red-600/40 hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2.5 group"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm sm:text-base shadow-sm hover:shadow transition-all duration-200 flex items-center justify-center gap-2.5 group cursor-pointer"
             >
               <span>Start 14-Day Free Trial</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -66,7 +66,7 @@ export default function HeroSection() {
 
             <a
               href="#demo-widget"
-              className="w-full sm:w-auto px-7 py-4 rounded-xl bg-white border-2 border-red-200 hover:border-red-600 text-slate-800 hover:text-red-600 font-bold text-base shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2.5 group"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 hover:text-slate-900 font-bold text-sm sm:text-base shadow-xs hover:shadow transition-all duration-200 flex items-center justify-center gap-2.5 group cursor-pointer"
             >
               <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
                 <Play className="w-3 h-3 fill-current ml-0.5" />

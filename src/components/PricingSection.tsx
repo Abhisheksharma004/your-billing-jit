@@ -191,7 +191,7 @@ export default function PricingSection() {
             <button
               type="button"
               onClick={() => setAnnualBilling(!annualBilling)}
-              className="mt-5 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              className="mt-5 px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-all shadow-sm hover:shadow cursor-pointer"
             >
               View {annualBilling ? "Monthly" : "Annual"} Plans
             </button>
@@ -293,10 +293,10 @@ export default function PricingSection() {
                   <div>
                     <a
                       href="#cta"
-                      className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      className={`w-full py-2.5 px-4 rounded-lg font-bold text-sm text-center flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:shadow ${
                         isPop
-                          ? "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30"
-                          : "border-2 border-red-600 text-red-600 hover:bg-red-50"
+                          ? "bg-red-600 hover:bg-red-700 text-white"
+                          : "border border-red-600 text-red-600 hover:bg-red-50 bg-white"
                       }`}
                     >
                       <span>{plan.cta_text || "Start 14-Day Free Trial"}</span>
