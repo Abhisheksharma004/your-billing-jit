@@ -1,19 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
-import { Check, Sparkles, ArrowRight, ShieldCheck, Zap, HelpCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Check, Sparkles, ArrowRight, ShieldCheck, Zap, RefreshCw } from "lucide-react";
 
 export default function PricingSection() {
   const [annualBilling, setAnnualBilling] = useState(true);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const plans = [
+  // Fallback plans if database has no active plans
+  const fallbackPlans = [
     {
       name: "Starter ERP",
-      desc: "Perfect for single retail counters, freelancers, and small traders.",
-      monthlyPrice: 799,
-      annualPrice: 599,
-      badge: null,
-      popular: false,
+      tagline: "Perfect for single retail counters, freelancers, and small traders.",
+      billing_cycle: "monthly",
+      monthly_price: 2999,
+      is_popular: false,
+      trial_days: 14,
+      cta_text: "Start 14-Day Free Trial",
       features: [
         "1 Branch & 2 Staff Logins",
         "Unlimited GST Invoices & Estimates",
@@ -22,17 +26,16 @@ export default function PricingSection() {
         "Standard Inventory Management",
         "WhatsApp Invoice PDF Sharing",
         "Standard Email & Chat Support"
-      ],
-      ctaText: "Start 14-Day Free Trial",
-      ctaStyle: "border-2 border-red-600 text-red-600 hover:bg-red-50"
+      ]
     },
     {
-      name: "Professional ERP",
-      desc: "Designed for growing wholesalers, manufacturers, and multi-store retailers.",
-      monthlyPrice: 1899,
-      annualPrice: 1499,
-      badge: "MOST POPULAR CHOICE",
-      popular: true,
+      name: "Growth Tier",
+      tagline: "Designed for growing wholesalers, manufacturers, and multi-store retailers.",
+      billing_cycle: "monthly",
+      monthly_price: 7499,
+      is_popular: true,
+      trial_days: 14,
+      cta_text: "Start Free 14-Day Trial",
       features: [
         "Up to 3 Branches & 10 User Roles",
         "1-Click Govt E-Invoicing & E-Way Bills",
@@ -42,17 +45,16 @@ export default function PricingSection() {
         "Full Double-Entry Financial Accounting",
         "Automated Tally XML / Excel Sync",
         "Priority 24/7 Phone & WhatsApp Support"
-      ],
-      ctaText: "Start Free 14-Day Trial",
-      ctaStyle: "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30"
+      ]
     },
     {
-      name: "Enterprise ERP",
-      desc: "For large enterprise chains, multi-state factories, and super-stockists.",
-      monthlyPrice: 4299,
-      annualPrice: 3499,
-      badge: "FULL UNLIMITED",
-      popular: false,
+      name: "Enterprise Tier",
+      tagline: "For large enterprise chains, multi-state factories, and super-stockists.",
+      billing_cycle: "monthly",
+      monthly_price: 14999,
+      is_popular: false,
+      trial_days: 30,
+      cta_text: "Request Enterprise Demo",
       features: [
         "Unlimited Branches & Warehouses",
         "Unlimited Staff & Cashier Accounts",
@@ -62,11 +64,59 @@ export default function PricingSection() {
         "Dedicated Chartered Accountant (CA) Desk",
         "Custom Print Template Designer",
         "Dedicated Account Manager & SLA Guarantee"
-      ],
-      ctaText: "Request Enterprise Demo",
-      ctaStyle: "border-2 border-slate-800 text-slate-900 hover:bg-slate-900 hover:text-white"
+      ]
+    },
+    {
+      name: "Starter Annual ERP",
+      tagline: "Save more with 1-year prepaid subscription for single counters.",
+      billing_cycle: "yearly",
+      monthly_price: 29990,
+      is_popular: false,
+      trial_days: 14,
+      cta_text: "Start 14-Day Free Trial",
+      features: [
+        "1 Full Year Access",
+        "1 Branch & 2 Staff Logins",
+        "Unlimited GST Invoices & Estimates",
+        "Point of Sale (POS) Counter Billing",
+        "Priority Email & Chat Support"
+      ]
     }
   ];
+
+  useEffect(() => {
+    async function fetchPublicPlans() {
+      try {
+        setIsLoading(true);
+        const res = await fetch("/api/superadmin/plans");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.plans) && data.plans.length > 0) {
+          setPlans(data.plans);
+        } else {
+          setPlans(fallbackPlans);
+        }
+      } catch (err) {
+        console.error("Failed to load public plans:", err);
+        setPlans(fallbackPlans);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchPublicPlans();
+  }, []);
+
+  const allPlans = plans.length > 0 ? plans : fallbackPlans;
+
+  // Filter strictly based on the selected billing cycle
+  const filteredPlans = allPlans.filter((p: any) => {
+    const cycle = (p.billing_cycle || "monthly").toLowerCase();
+    if (annualBilling) {
+      return cycle === "yearly" || cycle === "annual";
+    } else {
+      return cycle === "monthly";
+    }
+  });
 
   return (
     <section id="pricing" className="py-20 lg:py-28 bg-slate-50/60 relative">
@@ -85,10 +135,16 @@ export default function PricingSection() {
           </p>
 
           {/* Billing Cycle Toggle */}
-          <div className="pt-4 flex items-center justify-center gap-3">
-            <span className={`text-sm font-bold ${!annualBilling ? "text-slate-900" : "text-slate-500"}`}>
+          <div className="pt-4 flex items-center justify-center gap-3 select-none">
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(false)}
+              className={`text-sm font-bold transition-colors cursor-pointer ${
+                !annualBilling ? "text-slate-950 font-extrabold" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
               Monthly Billing
-            </span>
+            </button>
 
             <button
               type="button"
@@ -97,95 +153,165 @@ export default function PricingSection() {
               aria-label="Toggle annual billing"
             >
               <div
-                className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${annualBilling ? "translate-x-7" : "translate-x-0"
-                  }`}
+                className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
+                  annualBilling ? "translate-x-7" : "translate-x-0"
+                }`}
               />
             </button>
 
-            <span className={`text-sm font-bold flex items-center gap-1.5 ${annualBilling ? "text-slate-900" : "text-slate-500"}`}>
-              <span>Annual Billing</span>
-              <span className="text-[11px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                SAVE 20%
-              </span>
-            </span>
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(true)}
+              className={`text-sm font-bold transition-colors cursor-pointer ${
+                annualBilling ? "text-slate-950 font-extrabold" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Annual Billing
+            </button>
           </div>
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid lg:grid-cols-3 gap-8 items-stretch">
-          {plans.map((plan, idx) => {
-            const price = annualBilling ? plan.annualPrice : plan.monthlyPrice;
+        {isLoading ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+            <RefreshCw className="w-8 h-8 animate-spin text-red-600" />
+            <span className="text-sm font-semibold text-slate-600">Loading live subscription tiers...</span>
+          </div>
+        ) : filteredPlans.length === 0 ? (
+          <div className="max-w-md mx-auto py-16 px-6 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3">
+              <Zap className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">
+              No {annualBilling ? "Annual" : "Monthly"} Plans Configured
+            </h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              We currently don&apos;t have any {annualBilling ? "yearly" : "monthly"} plans active in the system. Switch to {annualBilling ? "Monthly" : "Annual"} billing to see our current plans.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(!annualBilling)}
+              className="mt-5 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+            >
+              View {annualBilling ? "Monthly" : "Annual"} Plans
+            </button>
+          </div>
+        ) : (
+          <div className={`grid gap-8 items-stretch ${
+            filteredPlans.length === 1
+              ? "max-w-md mx-auto"
+              : filteredPlans.length === 2
+              ? "md:grid-cols-2 max-w-4xl mx-auto"
+              : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+          }`}>
+            {filteredPlans.map((plan: any, idx: number) => {
+              // Real price directly from database — no fake calculations
+              const price = Number(plan.monthly_price) || 0;
+              const isPop = Boolean(plan.is_popular);
+              const features = Array.isArray(plan.features) ? plan.features : [];
+              const cycleUnit = plan.billing_cycle === "yearly" ? "year" : plan.billing_cycle === "quarterly" ? "quarter" : "month";
+              const billedSubtitle = plan.billing_cycle === "yearly" ? "Billed annually + GST" : plan.billing_cycle === "quarterly" ? "Billed quarterly + GST" : "Billed on a month-to-month basis + GST";
 
-            return (
-              <div
-                key={idx}
-                className={`relative bg-white rounded-2xl p-7 sm:p-9 flex flex-col justify-between transition-all duration-300 ${plan.popular
-                  ? "border-2 border-red-600 shadow-2xl shadow-red-600/15 lg:-translate-y-2"
-                  : "border border-slate-200 shadow-lg shadow-slate-950/5 hover:border-red-300"
+              return (
+                <div
+                  key={plan.id || idx}
+                  className={`relative bg-white rounded-2xl p-7 sm:p-9 flex flex-col justify-between transition-all duration-300 ${
+                    isPop
+                      ? "border-2 border-red-600 shadow-2xl shadow-red-600/15 lg:-translate-y-2"
+                      : "border border-slate-200 shadow-lg shadow-slate-950/5 hover:border-red-300"
                   }`}
-              >
-                {/* Popular Pill */}
-                {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[11px] font-black tracking-widest px-4 py-1 rounded-full uppercase shadow-md shadow-red-600/30 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 fill-current" />
-                    <span>{plan.badge}</span>
-                  </div>
-                )}
+                >
+                  {/* Popular Pill */}
+                  {isPop && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[11px] font-black tracking-widest px-4 py-1 rounded-full uppercase shadow-md shadow-red-600/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 fill-current" />
+                      <span>MOST POPULAR CHOICE</span>
+                    </div>
+                  )}
 
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1 min-h-[38px]">
-                      {plan.desc}
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1 min-h-[38px] leading-relaxed">
+                        {plan.tagline || plan.desc || plan.description || "Comprehensive GST accounting & inventory management."}
+                      </p>
+                    </div>
+
+                    {/* Price */}
+                    <div className="my-6 pb-6 border-b border-slate-100">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-slate-500 text-lg font-bold">₹</span>
+                        <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+                          {price.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-slate-500 text-xs font-semibold">/ {cycleUnit}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        {billedSubtitle}
+                      </div>
+                    </div>
+
+                    {/* Limits Highlight (Users & e-Way) */}
+                    {(plan.max_users || plan.eway_limit) && (
+                      <div className="grid grid-cols-2 gap-2 mb-6 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                        {plan.max_users && (
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">User Seats</span>
+                            <span className="font-bold text-slate-800">{plan.max_users} users</span>
+                          </div>
+                        )}
+                        {plan.eway_limit && (
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">e-Way Limit</span>
+                            <span className="font-bold text-slate-800">{plan.eway_limit}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Feature Checklist */}
+                    <div className="space-y-3 mb-8">
+                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400">What&apos;s included:</div>
+                      {features.length > 0 ? (
+                        features.map((feat: string, fidx: number) => (
+                          <div key={fidx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                              isPop ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
+                            }`}>
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                            <span className="font-medium leading-snug">{feat}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-slate-400 italic">All core billing and GST filing features included</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* CTA Button */}
+                  <div>
+                    <a
+                      href="#cta"
+                      className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        isPop
+                          ? "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30"
+                          : "border-2 border-red-600 text-red-600 hover:bg-red-50"
+                      }`}
+                    >
+                      <span>{plan.cta_text || "Start 14-Day Free Trial"}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </a>
+                    <p className="text-center text-[11px] text-slate-400 mt-2 font-medium">
+                      {plan.trial_days || 14}-day unrestricted trial. Cancel anytime.
                     </p>
                   </div>
 
-                  {/* Price */}
-                  <div className="my-6 pb-6 border-b border-slate-100">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-slate-500 text-lg font-bold">₹</span>
-                      <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-                        {price.toLocaleString("en-IN")}
-                      </span>
-                      <span className="text-slate-500 text-xs font-semibold">/ month</span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-1">
-                      {annualBilling ? "Billed annually (₹" + (price * 12).toLocaleString("en-IN") + "/yr) + GST" : "Billed on a month-to-month basis + GST"}
-                    </div>
-                  </div>
-
-                  {/* Feature Checklist */}
-                  <div className="space-y-3 mb-8">
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-400">What's included:</div>
-                    {plan.features.map((feat, fidx) => (
-                      <div key={fidx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
-                        <div className="w-4 h-4 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                        <span className="font-medium">{feat}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-
-                {/* CTA Button */}
-                <div>
-                  <a
-                    href="#cta"
-                    className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2 transition-all cursor-pointer ${plan.ctaStyle}`}
-                  >
-                    <span>{plan.ctaText}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
-                  <p className="text-center text-[11px] text-slate-400 mt-2 font-medium">
-                    14-day unrestricted trial. Cancel anytime.
-                  </p>
-                </div>
-
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Guarantee Banner */}
         <div className="mt-14 p-5 rounded-2xl bg-white border border-red-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">

@@ -229,22 +229,42 @@ export default function SuperAdminPage() {
                                 </a>
                             </div>
 
-                            {/* Action Buttons */}
                             {/* Action Button: Full Width */}
                             <div className="pt-2">
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-70 flex items-center justify-center gap-1.5"
+                                    className="w-full py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer disabled:cursor-not-allowed relative overflow-hidden flex items-center justify-center gap-1.5"
                                 >
+                                    {/* Button label */}
                                     {isLoading ? (
-                                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                                        <span className="opacity-80 text-sm font-bold">Verifying...</span>
                                     ) : (
                                         <>
                                             <span>Sign In</span>
                                             <ArrowRight className="w-4 h-4" />
                                         </>
                                     )}
+
+                                    {/* Indeterminate progress bar at bottom of button */}
+                                    {isLoading && (
+                                        <span className="absolute bottom-0 left-0 h-1 w-full overflow-hidden rounded-b-lg">
+                                            <span
+                                                className="absolute h-full bg-white/50 rounded-full"
+                                                style={{
+                                                    width: "45%",
+                                                    animation: "btnProgress 1.2s ease-in-out infinite",
+                                                }}
+                                            />
+                                        </span>
+                                    )}
+
+                                    <style>{`
+                                        @keyframes btnProgress {
+                                            0%   { left: -50%; }
+                                            100% { left: 110%; }
+                                        }
+                                    `}</style>
                                 </button>
                             </div>
 

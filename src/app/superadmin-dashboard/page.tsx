@@ -37,7 +37,10 @@ import {
   Radio,
   Check,
   Zap,
-  Globe
+  Globe,
+  Star,
+  Pencil,
+  Trash2
 } from "lucide-react";
 
 // Mock Tenant Data
@@ -136,7 +139,7 @@ export default function SuperAdminDashboardPage() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
-  const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "subscriptions" | "gateways" | "audit" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "subscriptions" | "billing" | "gateways" | "audit" | "settings">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Trial" | "Suspended">("All");
   
@@ -153,10 +156,31 @@ export default function SuperAdminDashboardPage() {
 
   // Add Company Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [newGstin, setNewGstin] = useState("");
   const [newCity, setNewCity] = useState("");
   const [newPlan, setNewPlan] = useState<"Enterprise" | "Growth" | "Starter">("Growth");
+
+  // DB Plans State
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
+  const [isDeletingPlanId, setIsDeletingPlanId] = useState<number | null>(null);
+
+  // Add Plan Form State
+  const [planName, setPlanName] = useState("");
+  const [planTagline, setPlanTagline] = useState("");
+  const [planBillingCycle, setPlanBillingCycle] = useState("monthly");
+  const [planMonthlyPrice, setPlanMonthlyPrice] = useState("");
+  const [planMaxUsers, setPlanMaxUsers] = useState("");
+  const [planEwayLimit, setPlanEwayLimit] = useState("");
+  const [planTrialDays, setPlanTrialDays] = useState("");
+  const [planCtaText, setPlanCtaText] = useState("");
+  const [planIsPopular, setPlanIsPopular] = useState(false);
+  const [planDescription, setPlanDescription] = useState("");
+  const [planFeatures, setPlanFeatures] = useState<string[]>([""]);
 
   // Filtered tenants
   const filteredTenants = tenants.filter((t) => {
@@ -220,6 +244,162 @@ export default function SuperAdminDashboardPage() {
     }));
   };
 
+  const fetchPlans = async () => {
+    try {
+      setIsLoadingPlans(true);
+      const res = await fetch("/api/superadmin/plans");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.plans)) {
+        setPlans(data.plans);
+      }
+    } catch (err) {
+      console.error("Failed to load plans:", err);
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const openAddPlanModal = () => {
+    setEditingPlanId(null);
+    setPlanName("");
+    setPlanTagline("");
+    setPlanBillingCycle("monthly");
+    setPlanMonthlyPrice("");
+    setPlanMaxUsers("");
+    setPlanEwayLimit("");
+    setPlanTrialDays("");
+    setPlanCtaText("");
+    setPlanIsPopular(false);
+    setPlanDescription("");
+    setPlanFeatures([""]);
+    setIsAddPlanModalOpen(true);
+  };
+
+  const openEditPlanModal = (plan: any) => {
+    setEditingPlanId(plan.id);
+    setPlanName(plan.name || "");
+    setPlanTagline(plan.tagline || "");
+    setPlanBillingCycle(plan.billing_cycle || "monthly");
+    setPlanMonthlyPrice(plan.monthly_price !== null && plan.monthly_price !== undefined ? String(plan.monthly_price) : "");
+    setPlanMaxUsers(plan.max_users || "");
+    setPlanEwayLimit(plan.eway_limit || "");
+    setPlanTrialDays(plan.trial_days !== null && plan.trial_days !== undefined ? String(plan.trial_days) : "14");
+    setPlanCtaText(plan.cta_text || "Start 14-Day Free Trial");
+    setPlanIsPopular(Boolean(plan.is_popular));
+    setPlanDescription(plan.description || "");
+    setPlanFeatures(Array.isArray(plan.features) && plan.features.length > 0 ? plan.features : [""]);
+    setIsAddPlanModalOpen(true);
+  };
+
+  const handleDeletePlan = async (plan: any) => {
+    const ok = window.confirm(`Are you sure you want to delete "${plan.name}" plan from the database?`);
+    if (!ok) return;
+
+    try {
+      setIsDeletingPlanId(plan.id);
+      const res = await fetch(`/api/superadmin/plans?id=${plan.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to delete plan");
+      }
+
+      toast.success(`Plan "${plan.name}" deleted successfully!`, {
+        title: "Plan Deleted",
+        details: "The subscription plan has been removed from MySQL database.",
+      });
+
+      await fetchPlans();
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete plan", {
+        title: "Delete Error",
+      });
+    } finally {
+      setIsDeletingPlanId(null);
+    }
+  };
+
+  const handleSavePlan = async () => {
+    if (!planName.trim()) {
+      toast.error("Please enter a plan name", { title: "Validation Error" });
+      return;
+    }
+
+    try {
+      setIsSavingPlan(true);
+      const isEditing = editingPlanId !== null;
+      const url = "/api/superadmin/plans";
+      const method = isEditing ? "PUT" : "POST";
+      const payload: any = {
+        name: planName,
+        tagline: planTagline,
+        billingCycle: planBillingCycle,
+        monthlyPrice: planMonthlyPrice,
+        maxUsers: planMaxUsers || "5",
+        ewayLimit: planEwayLimit || "2,500",
+        trialDays: planTrialDays || 14,
+        ctaText: planCtaText || "Start 14-Day Free Trial",
+        isPopular: planIsPopular,
+        description: planDescription,
+        features: planFeatures.filter((f) => f.trim() !== ""),
+      };
+
+      if (isEditing) {
+        payload.id = editingPlanId;
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `Failed to ${isEditing ? "update" : "create"} plan`);
+      }
+
+      toast.success(
+        isEditing
+          ? `Plan "${planName}" updated successfully!`
+          : `Plan "${planName}" created successfully!`,
+        {
+          title: isEditing ? "Plan Updated" : "Plan Saved in Database",
+          details: "The subscription plan has been saved to MySQL and is live on the dashboard.",
+        }
+      );
+
+      await fetchPlans();
+
+      // Reset form
+      setEditingPlanId(null);
+      setPlanName("");
+      setPlanTagline("");
+      setPlanBillingCycle("monthly");
+      setPlanMonthlyPrice("");
+      setPlanMaxUsers("");
+      setPlanEwayLimit("");
+      setPlanTrialDays("");
+      setPlanCtaText("");
+      setPlanDescription("");
+      setPlanFeatures([""]);
+      setPlanIsPopular(false);
+
+      setIsAddPlanModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Could not save plan", {
+        title: "Error Saving Plan",
+      });
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     async function checkSession() {
@@ -266,6 +446,7 @@ export default function SuperAdminDashboardPage() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+    fetchPlans();
     toast.wait("Wait for the data import operation to complete", {
       title: "Wait",
       duration: 1500,
@@ -401,7 +582,8 @@ export default function SuperAdminDashboardPage() {
                 icon={Building2} 
                 badge={tenants.length} 
               />
-              <NavItem tabKey="subscriptions" label="Plans & Billing" icon={CreditCard} />
+              <NavItem tabKey="subscriptions" label="Subscription Plans" icon={CreditCard} />
+              <NavItem tabKey="billing" label="Billing & Revenue" icon={FileText} />
               <NavItem tabKey="gateways" label="NIC & GST Gateways" icon={Server} pulse />
             </div>
 
@@ -515,7 +697,8 @@ export default function SuperAdminDashboardPage() {
                   <span className="text-xs text-slate-300">/</span>
                   <span className="text-xs font-bold text-red-600">
                     {activeTab === "tenants" && "Companies & Tenants"}
-                    {activeTab === "subscriptions" && "Plans & Billing"}
+                    {activeTab === "subscriptions" && "Subscription Plans"}
+                    {activeTab === "billing" && "Billing & Revenue"}
                     {activeTab === "gateways" && "NIC & GST Gateways"}
                     {activeTab === "audit" && "Audit & Security"}
                     {activeTab === "settings" && "System Settings"}
@@ -707,6 +890,7 @@ export default function SuperAdminDashboardPage() {
                 {activeTab === "overview" && "Superadmin Dashboard"}
                 {activeTab === "tenants" && "Tenant Companies Management"}
                 {activeTab === "subscriptions" && "Subscription Plans & MRR Tracking"}
+                {activeTab === "billing" && "Billing & Revenue Overview"}
                 {activeTab === "gateways" && "NIC & GSTN Gateway Telemetry"}
                 {activeTab === "audit" && "Master Security & Audit Logs"}
                 {activeTab === "settings" && "Global System Configurations"}
@@ -989,65 +1173,156 @@ export default function SuperAdminDashboardPage() {
 
           {/* SUBSCRIPTIONS TAB VIEW */}
           {activeTab === "subscriptions" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Starter Tier</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-bold">₹2,999/mo</span>
+            <div className="space-y-5">
+
+              {/* Section Header with Add Plan button */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-900">Subscription Plans</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Manage pricing tiers available to tenant businesses.</p>
                 </div>
-                <div className="mt-4">
-                  <div className="text-3xl font-black text-slate-900">
-                    {tenants.filter(t => t.plan === "Starter").length * 80 + 14}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">Subscribed companies</div>
-                  <div className="mt-4 space-y-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-2">✓ Up to 5 users</div>
-                    <div className="flex items-center gap-2">✓ 2,500 e-Invoices/mo</div>
-                    <div className="flex items-center gap-2">✓ Standard Email Support</div>
-                  </div>
-                </div>
+                <button
+                  onClick={openAddPlanModal}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  Add Plan
+                </button>
               </div>
 
-              <div className="bg-white p-6 rounded-xl border-2 border-red-500 shadow-xs relative">
-                <div className="absolute -top-3 right-4 px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
-                  Most Popular
-                </div>
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Growth Tier</span>
-                  <span className="px-2 py-0.5 rounded bg-red-50 text-red-700 text-xs font-bold">₹7,499/mo</span>
-                </div>
-                <div className="mt-4">
-                  <div className="text-3xl font-black text-slate-900">
-                    {tenants.filter(t => t.plan === "Growth").length * 110 + 42}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">Subscribed companies</div>
-                  <div className="mt-4 space-y-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-2">✓ Up to 25 users</div>
-                    <div className="flex items-center gap-2">✓ 15,000 e-Invoices/mo</div>
-                    <div className="flex items-center gap-2">✓ Automated GSP Reconciliation</div>
-                  </div>
-                </div>
+            {isLoadingPlans ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-xl border border-slate-200">
+                <RefreshCw className="w-6 h-6 animate-spin text-red-500" />
+                <span className="text-xs font-semibold">Loading live plans from database...</span>
               </div>
+            ) : plans.length === 0 ? (
+              <div className="py-12 text-center bg-white rounded-xl border border-slate-200 p-8">
+                <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-slate-700">No Subscription Plans Found</h3>
+                <p className="text-xs text-slate-400 mt-1">Click &quot;Add Plan&quot; to create your first pricing tier in the database.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {plans.map((p) => {
+                  const isPop = Boolean(p.is_popular);
+                  const subCount = p.subscribers_count ?? 0;
 
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Enterprise Tier</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-bold">₹14,999/mo</span>
-                </div>
-                <div className="mt-4">
-                  <div className="text-3xl font-black text-slate-900">
-                    {tenants.filter(t => t.plan === "Enterprise").length * 60 + 19}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">Subscribed companies</div>
-                  <div className="mt-4 space-y-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-2">✓ Unlimited users</div>
-                    <div className="flex items-center gap-2">✓ Unlimited IRN & E-Way Bills</div>
-                    <div className="flex items-center gap-2">✓ Dedicated Account Manager & 24x7 SLA</div>
-                  </div>
-                </div>
+                  return (
+                    <div
+                      key={p.id}
+                      className={`bg-white p-6 rounded-xl flex flex-col justify-between transition-all ${
+                        isPop
+                          ? "border-2 border-red-500 shadow-sm relative"
+                          : "border border-slate-200 shadow-2xs hover:border-slate-300"
+                      }`}
+                    >
+                      {isPop && (
+                        <div className="absolute -top-3 right-4 px-2.5 py-0.5 bg-red-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                          <span>★ Most Popular</span>
+                        </div>
+                      )}
+
+                      <div>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
+                          <div>
+                            <span className={`text-xs font-bold uppercase tracking-wider ${isPop ? "text-red-600" : "text-slate-500"}`}>
+                              {p.name}
+                            </span>
+                            {p.tagline && (
+                              <p className="text-[11px] text-slate-400 mt-0.5 leading-snug line-clamp-2">
+                                {p.tagline}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
+                            isPop ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-700"
+                          }`}>
+                            ₹{Number(p.monthly_price).toLocaleString("en-IN")}/{p.billing_cycle === "yearly" ? "yr" : "mo"}
+                          </span>
+                        </div>
+
+                        {/* Subscribers count */}
+                        <div className="mt-4">
+                          <div className="text-3xl font-black text-slate-900">
+                            {subCount}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">Subscribed companies</div>
+
+                          {/* Limits chips */}
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Users Limit</span>
+                              <span className="font-bold text-slate-700">{p.max_users || "Unlimited"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">e-Way Limit</span>
+                              <span className="font-bold text-slate-700">{p.eway_limit || "Unlimited"}</span>
+                            </div>
+                          </div>
+
+                          {/* Features list */}
+                          <div className="mt-4 space-y-2 text-xs text-slate-600">
+                            {p.features && p.features.length > 0 ? (
+                              p.features.map((feat: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <span className={`font-bold ${isPop ? "text-red-600" : "text-emerald-600"}`}>✓</span>
+                                  <span className="leading-tight">{feat}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-slate-400 italic text-[11px]">Standard ERP Features</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CTA & Actions */}
+                      <div className="mt-5 pt-3 border-t border-slate-100 space-y-2">
+                        <div
+                          className={`w-full py-2 px-3 rounded-lg text-xs font-bold text-center transition-all ${
+                            isPop
+                              ? "bg-red-600 text-white shadow-xs"
+                              : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {p.cta_text || "Start 14-Day Free Trial"}
+                        </div>
+
+                        {/* Update and Delete Buttons */}
+                        <div className="grid grid-cols-2 gap-2 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditPlanModal(p)}
+                            className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/70 text-slate-700 hover:text-blue-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Update</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePlan(p)}
+                            disabled={isDeletingPlanId === p.id}
+                            className="w-full py-1.5 px-2.5 rounded-lg border border-slate-200 hover:border-red-300 hover:bg-red-50/70 text-slate-700 hover:text-red-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+                          >
+                            {isDeletingPlanId === p.id ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-red-600" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                            )}
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
+          </div>
           )}
+
+
 
           {/* GATEWAYS TAB VIEW */}
           {activeTab === "gateways" && (
@@ -1099,6 +1374,87 @@ export default function SuperAdminDashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+
+          {/* BILLING & REVENUE TAB VIEW */}
+          {activeTab === "billing" && (
+            <div className="space-y-6">
+
+              {/* MRR Summary Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+                  <div className="text-xs font-semibold text-slate-500">Total MRR</div>
+                  <div className="text-2xl font-black text-slate-900 mt-2">₹18.45 Lakh</div>
+                  <div className="text-[11px] text-emerald-600 font-semibold mt-1">↑ +8.6% this month</div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+                  <div className="text-xs font-semibold text-slate-500">Invoices Raised (MTD)</div>
+                  <div className="text-2xl font-black text-slate-900 mt-2">₹21.2 Lakh</div>
+                  <div className="text-[11px] text-slate-500 font-medium mt-1">Including GST @ 18%</div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+                  <div className="text-xs font-semibold text-slate-500">Outstanding / Pending</div>
+                  <div className="text-2xl font-black text-rose-600 mt-2">₹1.84 Lakh</div>
+                  <div className="text-[11px] text-rose-500 font-semibold mt-1">2 tenants overdue</div>
+                </div>
+              </div>
+
+              {/* Recent Transactions Table */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h2 className="text-sm font-extrabold text-slate-900">Recent Billing Transactions</h2>
+                  <span className="text-[11px] text-slate-400 font-mono">Last 30 days</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th className="py-3 px-5">Tenant</th>
+                        <th className="py-3 px-5">Plan</th>
+                        <th className="py-3 px-5">Amount</th>
+                        <th className="py-3 px-5">Date</th>
+                        <th className="py-3 px-5">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {[
+                        { name: "Apex Logistics India Pvt Ltd", plan: "Enterprise", amount: "₹14,999", date: "15 Sep 2026", status: "Paid" },
+                        { name: "Bharat Pharma Distributors", plan: "Growth", amount: "₹7,499", date: "14 Sep 2026", status: "Paid" },
+                        { name: "Surat TexFab Mills", plan: "Enterprise", amount: "₹14,999", date: "12 Sep 2026", status: "Paid" },
+                        { name: "Chennai Tech Hardware Corp", plan: "Growth", amount: "₹7,499", date: "10 Sep 2026", status: "Paid" },
+                        { name: "Delhi Auto Spares Hub", plan: "Starter", amount: "₹2,999", date: "08 Sep 2026", status: "Overdue" },
+                        { name: "Jaipur Gemstone & Crafts Ltd", plan: "Starter", amount: "₹2,999", date: "05 Sep 2026", status: "Overdue" },
+                      ].map((tx, i) => (
+                        <tr key={i} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-5 font-semibold text-slate-900">{tx.name}</td>
+                          <td className="py-3 px-5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
+                              tx.plan === "Enterprise" ? "bg-red-50 text-red-700 border-red-200" :
+                              tx.plan === "Growth" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                              "bg-slate-100 text-slate-700 border-slate-200"
+                            }`}>{tx.plan}</span>
+                          </td>
+                          <td className="py-3 px-5 font-bold text-slate-900">{tx.amount}</td>
+                          <td className="py-3 px-5 text-slate-500 font-mono">{tx.date}</td>
+                          <td className="py-3 px-5">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              tx.status === "Paid"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-rose-50 text-rose-700 border border-rose-200"
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${tx.status === "Paid" ? "bg-emerald-500" : "bg-rose-500"}`} />
+                              {tx.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -1343,7 +1699,7 @@ export default function SuperAdminDashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition-all shadow-xs cursor-pointer"
+                  className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer inline-flex items-center gap-1.5"
                 >
                   Create Company
                 </button>
@@ -1352,6 +1708,269 @@ export default function SuperAdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ADD PLAN SIDE DRAWER */}
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/40 backdrop-blur-xs z-[99998] transition-opacity duration-300 ease-in-out ${
+          isAddPlanModalOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setIsAddPlanModalOpen(false)}
+      />
+
+      {/* Side Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-white z-[99999] shadow-2xl flex flex-col transform transition-transform duration-350 ease-out ${
+          isAddPlanModalOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"
+        }`}
+        style={{
+          transition: "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center">
+                  <CreditCard className="w-4.5 h-4.5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    {editingPlanId ? "Edit Subscription Plan" : "Add New Plan"}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {editingPlanId ? `Editing Plan #${editingPlanId} in database` : "Create a new subscription pricing tier"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddPlanModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Drawer Body — scrollable */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+              {/* Plan Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Plan Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={planName}
+                  onChange={(e) => setPlanName(e.target.value)}
+                  placeholder="Starter ERP"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors"
+                />
+              </div>
+
+              {/* Tagline */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">Tagline</label>
+                <input
+                  type="text"
+                  value={planTagline}
+                  onChange={(e) => setPlanTagline(e.target.value)}
+                  placeholder="Perfect for small traders and freelancers"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors"
+                />
+              </div>
+
+              {/* Billing Cycle */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Billing Cycle <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={planBillingCycle}
+                    onChange={(e) => setPlanBillingCycle(e.target.value)}
+                    className="w-full appearance-none px-3 py-2.5 pr-9 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 transition-colors cursor-pointer"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly (Every 3 months)</option>
+                    <option value="yearly">Yearly (Annual billing)</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Price (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={planMonthlyPrice}
+                  onChange={(e) => setPlanMonthlyPrice(e.target.value)}
+                  placeholder="599"
+                  onWheel={(e) => e.currentTarget.blur()}
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+
+              {/* Max Users & E-Way Bill */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 block">Max Users</label>
+                  <input
+                    type="number"
+                    value={planMaxUsers}
+                    onChange={(e) => setPlanMaxUsers(e.target.value)}
+                    placeholder="15"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 block">E-Way Bill Limit</label>
+                  <input
+                    type="number"
+                    value={planEwayLimit}
+                    onChange={(e) => setPlanEwayLimit(e.target.value)}
+                    placeholder="5000"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+
+              {/* Free Trial Days & CTA Text */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 block">Free Trial Days</label>
+                  <input
+                    type="number"
+                    value={planTrialDays}
+                    onChange={(e) => setPlanTrialDays(e.target.value)}
+                    placeholder="14"
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 block">CTA Button Text</label>
+                  <input
+                    type="text"
+                    value={planCtaText}
+                    onChange={(e) => setPlanCtaText(e.target.value)}
+                    placeholder="Start Free Trial"
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Mark as Popular */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={planIsPopular}
+                  onChange={(e) => setPlanIsPopular(e.target.checked)}
+                  className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500 cursor-pointer accent-red-600"
+                />
+                <span className="text-xs font-medium text-slate-700">Mark as Popular</span>
+              </label>
+
+              {/* Features — dynamic list */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700">What&apos;s Included (Features)</label>
+                  <button
+                    type="button"
+                    onClick={() => setPlanFeatures([...planFeatures, ""])}
+                    className="text-[10px] font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" /> Add
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {planFeatures.map((feat, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                      <input
+                        type="text"
+                        value={feat}
+                        onChange={(e) => {
+                          const updated = [...planFeatures];
+                          updated[idx] = e.target.value;
+                          setPlanFeatures(updated);
+                        }}
+                        placeholder={`Feature ${idx + 1}`}
+                        className="flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors"
+                      />
+                      {planFeatures.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setPlanFeatures(planFeatures.filter((_, i) => i !== idx))}
+                          className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">Description</label>
+                <textarea
+                  rows={3}
+                  value={planDescription}
+                  onChange={(e) => setPlanDescription(e.target.value)}
+                  placeholder="Brief description of this plan..."
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400 text-xs text-slate-900 placeholder:text-slate-400 transition-colors resize-none"
+                />
+              </div>
+
+              {/* Info tip */}
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-100">
+                <span className="text-amber-500 text-xs mt-0.5">ⓘ</span>
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  Once created, this plan will be immediately available for tenant assignments. You can edit limits anytime from the Plans page.
+                </p>
+              </div>
+
+            </div>
+
+            {/* Drawer Footer — sticky */}
+            <div className="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-t border-slate-100 bg-white">
+              <button
+                onClick={() => setIsAddPlanModalOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 bg-slate-50 border border-slate-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePlan}
+                disabled={isSavingPlan}
+                className="flex-1 py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                {isSavingPlan ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {editingPlanId ? "Updating..." : "Saving..."}
+                  </>
+                ) : (
+                  <>
+                    {editingPlanId ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {editingPlanId ? "Update Plan" : "Create Plan"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
 
     </div>
   );
