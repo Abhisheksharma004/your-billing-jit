@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ErpCanvas from "@/components/ErpCanvas";
 import {
     ReceiptText,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 
 export default function SuperAdminPage() {
+    const router = useRouter();
     const [userId, setUserId] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +35,9 @@ export default function SuperAdminPage() {
         setTimeout(() => {
             setIsLoading(false);
             setIsSuccess(true);
+            setTimeout(() => {
+                router.push("/superadmin-dashboard");
+            }, 800);
         }, 1000);
     };
 
@@ -97,13 +102,18 @@ export default function SuperAdminPage() {
 
                     {/* Successful Login State */}
                     {isSuccess ? (
-                        <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2 animate-in zoom-in duration-200">
+                        <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-3 animate-in zoom-in duration-200">
                             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
                             <div className="text-sm font-bold text-slate-900">Superadmin Authenticated!</div>
                             <p className="text-xs text-slate-600">Master session initiated for <strong>{userId || "root-admin"}</strong>. Redirecting to Master ERP Console...</p>
-                            <Link href="/" className="inline-block pt-1 text-xs font-bold text-red-600 hover:underline">
-                                ← Go to Homepage
-                            </Link>
+                            <div className="pt-1 flex items-center justify-center gap-3">
+                                <Link href="/superadmin-dashboard" className="inline-block py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors">
+                                    Go to Dashboard Now →
+                                </Link>
+                                <Link href="/" className="inline-block text-xs font-semibold text-slate-600 hover:text-red-600 hover:underline">
+                                    ← Homepage
+                                </Link>
+                            </div>
                         </div>
                     ) : !isOtpMode ? (
                         /* Standard Superadmin ID & Master Password Form */
