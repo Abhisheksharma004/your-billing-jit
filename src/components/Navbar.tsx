@@ -189,14 +189,14 @@ export default function Navbar() {
                 <span>Login</span>
               </Link>
 
-              <a
-                href="#cta"
+              <Link
+                href="/signup"
                 className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 group cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Sign Up</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </a>
+              </Link>
             </div>
 
             {/* Mobile & Tablet Controls */}
@@ -207,12 +207,12 @@ export default function Navbar() {
               >
                 Login
               </Link>
-              <a
-                href="#cta"
+              <Link
+                href="/signup"
                 className="px-3.5 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm hover:shadow transition-all whitespace-nowrap"
               >
                 Sign Up
-              </a>
+              </Link>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -290,14 +290,14 @@ export default function Navbar() {
                 <LogIn className="w-4 h-4 text-slate-600" />
                 <span>Login</span>
               </Link>
-              <a
-                href="#cta"
+              <Link
+                href="/signup"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full text-center py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow flex items-center justify-center gap-1.5 transition-all"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Sign Up Free</span>
-              </a>
+              </Link>
             </div>
           </div>
         )}

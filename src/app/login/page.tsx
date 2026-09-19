@@ -183,7 +183,7 @@ export default function LoginPage() {
                 </button>
 
                 <Link
-                  href="/#cta"
+                  href="/signup"
                   className="w-full py-2.5 px-4 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-all text-center flex items-center justify-center cursor-pointer"
                 >
                   Create New Account
