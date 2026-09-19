@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/context/ToastContext";
 import { 
   ReceiptText, 
   Building2, 
@@ -128,6 +130,11 @@ const initialTenants: Tenant[] = [
 ];
 
 export default function SuperAdminDashboardPage() {
+  const router = useRouter();
+  const toast = useToast();
+  const [adminData, setAdminData] = useState<{ id: number; name: string; username: string; email: string; role: string } | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "subscriptions" | "gateways" | "audit" | "settings">("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,27 +190,97 @@ export default function SuperAdminDashboardPage() {
     setNewGstin("");
     setNewCity("");
     setIsAddModalOpen(false);
+    toast.success(`Company "${newCompanyName}" created successfully!`, {
+      title: "Success",
+      details: `Company: ${newCompanyName}\nGSTIN: ${newTenantItem.gstin}\nPlan: ${newPlan}\nCity: ${newTenantItem.city}\nCreated at: ${new Date().toLocaleString()}`,
+    });
   };
 
   const toggleTenantStatus = (id: string) => {
     setTenants(tenants.map(t => {
       if (t.id === id) {
+        const nextStatus = t.status === "Active" ? "Suspended" : "Active";
+        if (nextStatus === "Suspended") {
+          toast.warning(`Company "${t.name}" has been suspended!`, {
+            title: "Warning",
+            details: `Tenant ${t.id} suspended. E-Invoicing and user access temporarily revoked.`,
+          });
+        } else {
+          toast.success(`Company "${t.name}" is now active!`, {
+            title: "Success",
+            details: `Tenant ${t.id} re-activated with full access.`,
+          });
+        }
         return {
           ...t,
-          status: t.status === "Active" ? "Suspended" : "Active"
+          status: nextStatus
         };
       }
       return t;
     }));
   };
 
+  useEffect(() => {
+    let isMounted = true;
+    async function checkSession() {
+      try {
+        const res = await fetch("/api/superadmin/me");
+        if (!res.ok) {
+          router.push("/superadmin");
+          return;
+        }
+        const data = await res.json();
+        if (data.success && data.admin) {
+          if (isMounted) {
+            setAdminData(data.admin);
+            setIsAuthChecking(false);
+          }
+        } else {
+          router.push("/superadmin");
+        }
+      } catch {
+        router.push("/superadmin");
+      }
+    }
+    checkSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
+
+  const handleLogout = async () => {
+    toast.info("Signing out from master session...", {
+      title: "Info",
+      details: "Terminating root admin session and removing authentication cookie.",
+    });
+    try {
+      await fetch("/api/superadmin/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Logout error", err);
+    } finally {
+      setTimeout(() => {
+        router.push("/superadmin?logout=success");
+      }, 400);
+    }
+  };
+
   const handleRefresh = () => {
     setIsRefreshing(true);
+    toast.wait("Wait for the data import operation to complete", {
+      title: "Wait",
+      duration: 1500,
+      details: "Reconnecting to NIC Gateway endpoints and recalculating live telemetry metrics...",
+    });
     setTimeout(() => {
       setIsRefreshing(false);
       const now = new Date();
-      setLastSyncTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    }, 600);
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setLastSyncTime(timeStr);
+      toast.success("All systems synchronized and operational!", {
+        title: "Success",
+        details: `Sync time: ${timeStr}\nLatency: 114ms\nTotal tenants: ${tenants.length}`,
+      });
+    }, 1500);
   };
 
   // Nav item component helper
@@ -379,22 +456,22 @@ export default function SuperAdminDashboardPage() {
           {/* User Footer Logout */}
           <div className="p-3 border-t border-slate-100 bg-slate-50/50">
             {!isCollapsed ? (
-              <Link
-                href="/superadmin"
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors border border-slate-200 hover:border-red-200"
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors border border-slate-200 hover:border-red-200 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sign Out</span>
-              </Link>
+              </button>
             ) : (
               <div className="flex justify-center">
-                <Link
-                  href="/superadmin"
+                <button
+                  onClick={handleLogout}
                   title="Sign Out"
-                  className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                </Link>
+                </button>
               </div>
             )}
           </div>
@@ -574,8 +651,8 @@ export default function SuperAdminDashboardPage() {
               {adminMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
                   <div className="p-2.5 border-b border-slate-100">
-                    <div className="font-extrabold text-slate-900">Root Administrator</div>
-                    <div className="text-[11px] text-slate-500">root@yourbilling.internal</div>
+                    <div className="font-extrabold text-slate-900">{adminData?.name || "Root Administrator"}</div>
+                    <div className="text-[11px] text-slate-500">{adminData?.email || "root@yourbilling.internal"}</div>
                     <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                       Multi-Factor Auth Active
@@ -604,13 +681,13 @@ export default function SuperAdminDashboardPage() {
                     </button>
                   </div>
                   <div className="pt-1 border-t border-slate-100">
-                    <Link
-                      href="/superadmin"
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-red-600 hover:bg-red-50 text-left font-bold transition-colors"
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-red-600 hover:bg-red-50 text-left font-bold transition-colors cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out</span>
-                    </Link>
+                    </button>
                   </div>
                 </div>
               )}
@@ -639,8 +716,43 @@ export default function SuperAdminDashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Sync Status:</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Interactive Notification Test Triggers */}
+              <div className="hidden xl:flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 px-1.5 uppercase">Test Toasts:</span>
+                <button
+                  onClick={() => toast.error("Wait for the data import operation to complete", { title: "Error", details: "Database lock timeout: Table 'tenants' could not acquire exclusive schema lock." })}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+                >
+                  Error
+                </button>
+                <button
+                  onClick={() => toast.success("Wait for the data import operation to complete", { title: "Success", details: "Data import completed with 142 records parsed and committed." })}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer"
+                >
+                  Success
+                </button>
+                <button
+                  onClick={() => toast.info("Wait for the data import operation to complete", { title: "Info", details: "Background worker thread started with PID 4820." })}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors cursor-pointer"
+                >
+                  Info
+                </button>
+                <button
+                  onClick={() => toast.warning("Wait for the data import operation to complete", { title: "Warning", details: "High memory utilization (84%). Job execution throttled." })}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                >
+                  Warning
+                </button>
+                <button
+                  onClick={() => toast.wait("Wait for the data import operation to complete", { title: "Wait", duration: 4000, details: "Awaiting response from external NIC e-invoice webhook..." })}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  Wait
+                </button>
+              </div>
+
+              <span className="text-xs text-slate-400 hidden sm:inline">Sync Status:</span>
               <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
                 {lastSyncTime === "Just now" ? "Realtime (Connected)" : `Last synced: ${lastSyncTime}`}
               </span>

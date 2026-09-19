@@ -1,23 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/context/ToastContext";
 import ErpCanvas from "@/components/ErpCanvas";
 import {
     ReceiptText,
-    ShieldAlert,
     Lock,
     Eye,
     EyeOff,
     Smartphone,
-    CheckCircle2,
     ShieldCheck,
     ArrowRight
 } from "lucide-react";
 
 export default function SuperAdminPage() {
     const router = useRouter();
+    const toast = useToast();
     const [userId, setUserId] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -27,24 +27,82 @@ export default function SuperAdminPage() {
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [otpSent, setOtpSent] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    // Check if user just logged out
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("logout") === "success") {
+                toast.info("Superadmin master session has been logged out successfully.", {
+                    title: "Info",
+                    details: "Your secure JWT session cookie has been removed. Please log in again.",
+                });
+                window.history.replaceState({}, "", "/superadmin");
+            }
+        }
+    }, [toast]);
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setTimeout(() => {
+
+        const waitToastId = toast.wait("Verifying credentials with database...", {
+            title: "Wait",
+            duration: 1500,
+            details: `Connecting to MySQL server and validating user: "${userId || "root-admin"}"`,
+        });
+
+        try {
+            const res = await fetch("/api/superadmin/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, password }),
+            });
+
+            const data = await res.json();
+            toast.dismiss(waitToastId);
+
+            if (!res.ok || !data.success) {
+                const msg = data.message || "Invalid credentials. Please try again.";
+                toast.error(msg, {
+                    title: "Error",
+                    details: `Status: 401 Unauthorized\nReason: Invalid Superadmin ID or Master Password.\nAttempted User: ${userId || "empty"}\nTimestamp: ${new Date().toLocaleTimeString()}`,
+                });
+                setIsLoading(false);
+                return;
+            }
+
+            toast.success("Superadmin authenticated successfully! Redirecting...", {
+                title: "Success",
+                details: `Admin Name: ${data.admin?.name || "Root Admin"}\nRole: ${data.admin?.role || "SUPER_ADMIN"}\nSession Token: Generated (24h validity)`,
+            });
             setIsLoading(false);
-            setIsSuccess(true);
             setTimeout(() => {
                 router.push("/superadmin-dashboard");
             }, 800);
-        }, 1000);
+        } catch (err: any) {
+            toast.dismiss(waitToastId);
+            const errText = "Failed to connect to authentication server. Please check database.";
+            toast.error(errText, {
+                title: "Error",
+                details: err.message || "Network request failed to reach /api/superadmin/login",
+            });
+            setIsLoading(false);
+        }
     };
 
     const handleSendOtp = (e: React.FormEvent) => {
         e.preventDefault();
         if (mobileNumber.length >= 10) {
             setOtpSent(true);
+            toast.info(`One-Time 2FA Passcode dispatched to +91 ${mobileNumber}`, {
+                title: "Info",
+                details: "Use master OTP: 123456 to verify root access.",
+            });
+        } else {
+            toast.warning("Please enter a valid 10-digit mobile number.", {
+                title: "Warning",
+            });
         }
     };
 
@@ -100,23 +158,8 @@ export default function SuperAdminPage() {
                         </p>
                     </div>
 
-                    {/* Successful Login State */}
-                    {isSuccess ? (
-                        <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-3 animate-in zoom-in duration-200">
-                            <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-                            <div className="text-sm font-bold text-slate-900">Superadmin Authenticated!</div>
-                            <p className="text-xs text-slate-600">Master session initiated for <strong>{userId || "root-admin"}</strong>. Redirecting to Master ERP Console...</p>
-                            <div className="pt-1 flex items-center justify-center gap-3">
-                                <Link href="/superadmin-dashboard" className="inline-block py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors">
-                                    Go to Dashboard Now →
-                                </Link>
-                                <Link href="/" className="inline-block text-xs font-semibold text-slate-600 hover:text-red-600 hover:underline">
-                                    ← Homepage
-                                </Link>
-                            </div>
-                        </div>
-                    ) : !isOtpMode ? (
-                        /* Standard Superadmin ID & Master Password Form */
+                    {/* Standard Superadmin ID & Master Password Form */}
+                    {!isOtpMode ? (
                         <form onSubmit={handleLogin} className="space-y-4">
 
                             {/* User ID Field */}

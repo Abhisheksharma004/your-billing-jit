@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   authors: [{ name: "Your Billing Software Team" }],
 };
 
+import { ToastProvider } from "@/context/ToastContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth`}>
       <body className="min-h-full flex flex-col antialiased bg-white text-slate-900 selection:bg-red-500 selection:text-white">
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );
