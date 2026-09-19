@@ -2,25 +2,73 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+  --primary-red: #dc2626;
+  --primary-red-hover: #b91c1c;
+  --red-glow: rgba(220, 38, 38, 0.15);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #ffffff;
+  color: #0f172a;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  overflow-x: hidden;
+}
+
+/* Custom subtle red glow gradients */
+.bg-radial-red {
+  background: radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.bg-radial-red-card {
+  background: radial-gradient(circle at top right, rgba(254, 226, 226, 0.45) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.red-shadow-sm {
+  box-shadow: 0 4px 20px -2px rgba(220, 38, 38, 0.08);
+}
+
+.red-shadow-lg {
+  box-shadow: 0 12px 36px -4px rgba(220, 38, 38, 0.16);
+}
+
+.red-shadow-hover:hover {
+  box-shadow: 0 20px 40px -8px rgba(220, 38, 38, 0.22);
+}
+
+/* Subtle grid background pattern */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(220, 38, 38, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(220, 38, 38, 0.04) 1px, transparent 1px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #fca5a5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ef4444;
 }
