@@ -10,7 +10,7 @@ import { RowDataPacket } from "mysql2";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    const { email, contactNumber } = await request.json();
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return NextResponse.json(
@@ -20,15 +20,41 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanContact = contactNumber ? String(contactNumber).trim() : "";
 
     // Check if email is already registered
-    const [existing] = await pool.query<RowDataPacket[]>(
+    const [existingEmail] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM companies WHERE email = ?",
       [cleanEmail]
     );
-    if (existing.length > 0) {
+
+    // Check if contact number is already registered
+    let existingContact: RowDataPacket[] = [];
+    if (cleanContact) {
+      const [res] = await pool.query<RowDataPacket[]>(
+        "SELECT id FROM companies WHERE contact_number = ?",
+        [cleanContact]
+      );
+      existingContact = res;
+    }
+
+    if (existingEmail.length > 0 && existingContact.length > 0) {
+      return NextResponse.json(
+        { success: false, error: "This email and mobile number are already registered. Please log in instead." },
+        { status: 409 }
+      );
+    }
+
+    if (existingEmail.length > 0) {
       return NextResponse.json(
         { success: false, error: "This email is already registered. Please log in instead." },
+        { status: 409 }
+      );
+    }
+
+    if (existingContact.length > 0) {
+      return NextResponse.json(
+        { success: false, error: "This mobile number is already registered. Please use a different number or log in." },
         { status: 409 }
       );
     }

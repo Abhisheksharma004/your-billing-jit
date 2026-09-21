@@ -17,6 +17,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import { useToast } from "@/context/ToastContext";
+
 type Step = "form" | "otp" | "success";
 
 interface RegistrationResult {
@@ -28,6 +30,7 @@ interface RegistrationResult {
 }
 
 export default function SignupPage() {
+  const toast = useToast();
   const [step, setStep] = useState<Step>("form");
 
   // Form fields
@@ -35,8 +38,18 @@ export default function SignupPage() {
   const [contactPerson, setContactPerson] = useState("");
   const [email, setEmail] = useState("");
   const [contactNumber, setContactNumber] = useState("");
-  const [agreeTerms, setAgreeTerms] = useState(true);
-  const [whatsappUpdates, setWhatsappUpdates] = useState(true);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [whatsappUpdates, setWhatsappUpdates] = useState(false);
+
+  // Field validation & availability states
+  const [emailError, setEmailError] = useState("");
+  const [contactError, setContactError] = useState("");
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isCheckingContact, setIsCheckingContact] = useState(false);
+
+  // Prevent multiple redundant warning toasts for the same input
+  const lastWarnedEmail = useRef<string>("");
+  const lastWarnedContact = useRef<string>("");
 
   // OTP state
   const [otp, setOtp] = useState(["", "", "", "", "", "", ""]);
@@ -49,6 +62,106 @@ export default function SignupPage() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [formError, setFormError] = useState("");
   const [registrationResult, setRegistrationResult] = useState<RegistrationResult | null>(null);
+
+  // Check email availability
+  const checkEmailAvailability = useCallback(
+    async (val: string) => {
+      const clean = val.trim().toLowerCase();
+      if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+        setEmailError("");
+        lastWarnedEmail.current = "";
+        return;
+      }
+
+      setIsCheckingEmail(true);
+      try {
+        const res = await fetch("/api/signup/check-availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "email", value: clean }),
+        });
+        const data = await res.json();
+        if (!data.available) {
+          setEmailError(data.error);
+          // Show toast warning only ONCE for this email
+          if (lastWarnedEmail.current !== clean) {
+            lastWarnedEmail.current = clean;
+            toast.warning(data.error, { title: "Email Already Exists" });
+          }
+        } else {
+          setEmailError("");
+          lastWarnedEmail.current = "";
+        }
+      } catch {
+        // silent error handling
+      } finally {
+        setIsCheckingEmail(false);
+      }
+    },
+    [toast]
+  );
+
+  // Check contact number availability
+  const checkContactAvailability = useCallback(
+    async (val: string) => {
+      const clean = val.replace(/\D/g, "");
+      if (clean.length !== 10) {
+        setContactError("");
+        lastWarnedContact.current = "";
+        return;
+      }
+
+      setIsCheckingContact(true);
+      try {
+        const res = await fetch("/api/signup/check-availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "contact", value: clean }),
+        });
+        const data = await res.json();
+        if (!data.available) {
+          setContactError(data.error);
+          // Show toast warning only ONCE for this contact number
+          if (lastWarnedContact.current !== clean) {
+            lastWarnedContact.current = clean;
+            toast.warning(data.error, { title: "Mobile Number Exists" });
+          }
+        } else {
+          setContactError("");
+          lastWarnedContact.current = "";
+        }
+      } catch {
+        // silent error handling
+      } finally {
+        setIsCheckingContact(false);
+      }
+    },
+    [toast]
+  );
+
+  // Live debounce validation on Email
+  useEffect(() => {
+    if (!email || !email.includes("@")) {
+      setEmailError("");
+      return;
+    }
+    const timer = setTimeout(() => {
+      checkEmailAvailability(email);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [email, checkEmailAvailability]);
+
+  // Live debounce validation on Contact Number
+  useEffect(() => {
+    if (contactNumber.length !== 10) {
+      setContactError("");
+      return;
+    }
+    const timer = setTimeout(() => {
+      checkContactAvailability(contactNumber);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [contactNumber, checkContactAvailability]);
 
   // Cooldown timer
   useEffect(() => {
@@ -79,6 +192,21 @@ export default function SignupPage() {
       setFormError("Please enter a valid 10-digit mobile number.");
       return;
     }
+    if (!agreeTerms || !whatsappUpdates) {
+      setFormError("Please accept the Terms of Service and WhatsApp updates to proceed.");
+      return;
+    }
+
+    if (emailError) {
+      setFormError(emailError);
+      toast.error(emailError, { title: "Email Not Available" });
+      return;
+    }
+    if (contactError) {
+      setFormError(contactError);
+      toast.error(contactError, { title: "Mobile Not Available" });
+      return;
+    }
 
     setIsSendingOtp(true);
 
@@ -86,12 +214,17 @@ export default function SignupPage() {
       const res = await fetch("/api/signup/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          contactNumber: contactNumber.trim()
+        }),
       });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setFormError(data.error || "Failed to send OTP. Please try again.");
+        const errMsg = data.error || "Failed to send OTP. Please try again.";
+        setFormError(errMsg);
+        toast.error(errMsg, { title: "Signup Error" });
         setIsSendingOtp(false);
         return;
       }
@@ -100,8 +233,10 @@ export default function SignupPage() {
       setCooldown(60);
       setOtp(["", "", "", "", "", "", ""]);
       setOtpError("");
+      toast.success("7-digit verification OTP sent to your email.", { title: "OTP Sent" });
     } catch {
       setFormError("Network error. Please check your connection.");
+      toast.error("Network error. Please check your connection.", { title: "Connection Error" });
     } finally {
       setIsSendingOtp(false);
     }
@@ -117,12 +252,17 @@ export default function SignupPage() {
       const res = await fetch("/api/signup/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          contactNumber: contactNumber.trim()
+        }),
       });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setOtpError(data.error || "Failed to resend OTP.");
+        const errMsg = data.error || "Failed to resend OTP.";
+        setOtpError(errMsg);
+        toast.error(errMsg, { title: "Resend Failed" });
         setIsSendingOtp(false);
         return;
       }
@@ -130,8 +270,10 @@ export default function SignupPage() {
       setCooldown(60);
       setOtp(["", "", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
+      toast.success("New verification OTP sent to your email.", { title: "OTP Resent" });
     } catch {
       setOtpError("Network error. Please try again.");
+      toast.error("Network error. Please try again.", { title: "Connection Error" });
     } finally {
       setIsSendingOtp(false);
     }
@@ -206,19 +348,23 @@ export default function SignupPage() {
       const registerData = await registerRes.json();
 
       if (!registerRes.ok || !registerData.success) {
-        setOtpError(registerData.error || "Registration failed. Please try again.");
+        const errMsg = registerData.error || "Registration failed. Please try again.";
+        setOtpError(errMsg);
+        toast.error(errMsg, { title: "Registration Error" });
         setIsVerifying(false);
         return;
       }
 
       setRegistrationResult(registerData);
       setStep("success");
+      toast.success("Account created successfully! Credentials sent to your email.", { title: "Registration Complete" });
     } catch {
       setOtpError("Network error. Please try again.");
+      toast.error("Network error. Please try again.", { title: "Connection Error" });
     } finally {
       setIsVerifying(false);
     }
-  }, [otp, email, companyName, contactPerson, contactNumber, whatsappUpdates]);
+  }, [otp, email, companyName, contactPerson, contactNumber, whatsappUpdates, toast]);
 
   // Auto-submit when all 7 digits are filled
   useEffect(() => {
@@ -286,7 +432,7 @@ export default function SignupPage() {
                     required
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Apex Enterprises Pvt Ltd"
+                    placeholder="Apex Enterprises Pvt Ltd"
                     className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
                   />
                 </div>
@@ -306,7 +452,7 @@ export default function SignupPage() {
                     required
                     value={contactPerson}
                     onChange={(e) => setContactPerson(e.target.value)}
-                    placeholder="e.g. Rahul Sharma"
+                    placeholder="Abhishek Sharma"
                     className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
                   />
                 </div>
@@ -315,9 +461,14 @@ export default function SignupPage() {
               {/* Business Email & Contact Number */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700 block">
-                    Business Email <span className="text-red-600 font-bold">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700 block">
+                      Business Email <span className="text-red-600 font-bold">*</span>
+                    </label>
+                    {isCheckingEmail && (
+                      <span className="text-[10px] text-slate-400 animate-pulse">Checking...</span>
+                    )}
+                  </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <Mail className="w-4 h-4" />
@@ -326,16 +477,32 @@ export default function SignupPage() {
                       type="email"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => checkEmailAvailability(email)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEmail(val);
+                        if (emailError) setEmailError("");
+                        if (lastWarnedEmail.current && lastWarnedEmail.current !== val.trim().toLowerCase()) {
+                          lastWarnedEmail.current = "";
+                        }
+                      }}
                       placeholder="name@company.com"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-lg border text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none transition-colors ${emailError
+                        ? "border-red-500 ring-1 ring-red-500 bg-red-50/20"
+                        : "border-slate-300 focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                        }`}
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700 block">
-                    Contact Number <span className="text-red-600 font-bold">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700 block">
+                      Contact Number <span className="text-red-600 font-bold">*</span>
+                    </label>
+                    {isCheckingContact && (
+                      <span className="text-[10px] text-slate-400 animate-pulse">Checking...</span>
+                    )}
+                  </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-xs font-bold gap-1">
                       <Smartphone className="w-3.5 h-3.5 text-slate-400" />
@@ -346,9 +513,20 @@ export default function SignupPage() {
                       required
                       maxLength={10}
                       value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value.replace(/\D/g, ""))}
+                      onBlur={() => checkContactAvailability(contactNumber)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setContactNumber(val);
+                        if (contactError) setContactError("");
+                        if (lastWarnedContact.current && lastWarnedContact.current !== val) {
+                          lastWarnedContact.current = "";
+                        }
+                      }}
                       placeholder="10-digit mobile"
-                      className="w-full pl-14 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors font-mono"
+                      className={`w-full pl-14 pr-4 py-2.5 rounded-lg border text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none transition-colors font-mono ${contactError
+                        ? "border-red-500 ring-1 ring-red-500 bg-red-50/20"
+                        : "border-slate-300 focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                        }`}
                     />
                   </div>
                 </div>
@@ -368,19 +546,21 @@ export default function SignupPage() {
                     I agree to the{" "}
                     <a href="#" className="text-red-600 hover:underline font-semibold">Terms of Service</a>{" "}
                     and{" "}
-                    <a href="#" className="text-red-600 hover:underline font-semibold">Privacy Policy</a>.
+                    <a href="#" className="text-red-600 hover:underline font-semibold">Privacy Policy</a>
+                    <span className="text-red-600 font-bold ml-0.5">*</span>
                   </span>
                 </label>
                 <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer select-none">
                   <input
                     type="checkbox"
+                    required
                     checked={whatsappUpdates}
                     onChange={(e) => setWhatsappUpdates(e.target.checked)}
                     className="rounded border-slate-300 text-red-600 focus:ring-red-500 accent-red-600 w-4 h-4 mt-0.5"
                   />
                   <span className="flex items-center gap-1.5">
-                    <span>Send onboarding guide & GST updates on WhatsApp</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Recommended</span>
+                    <span>Send onboarding guide & GST updates on WhatsApp<span className="text-red-600 font-bold ml-0.5">*</span></span>
+                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">Required</span>
                   </span>
                 </label>
               </div>

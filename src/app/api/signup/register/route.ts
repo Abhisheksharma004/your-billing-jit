@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanContact = contactNumber.trim();
 
     // Verify that email OTP was verified
     const [verifiedOtp] = await pool.query<RowDataPacket[]>(
@@ -198,14 +199,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email is already registered
-    const [existing] = await pool.query<RowDataPacket[]>(
+    // Check if email or contact number is already registered
+    const [existingEmail] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM companies WHERE email = ?",
       [cleanEmail]
     );
-    if (existing.length > 0) {
+    const [existingContact] = await pool.query<RowDataPacket[]>(
+      "SELECT id FROM companies WHERE contact_number = ?",
+      [cleanContact]
+    );
+
+    if (existingEmail.length > 0 && existingContact.length > 0) {
+      return NextResponse.json(
+        { success: false, error: "This email and mobile number are already registered." },
+        { status: 409 }
+      );
+    }
+    if (existingEmail.length > 0) {
       return NextResponse.json(
         { success: false, error: "This email is already registered." },
+        { status: 409 }
+      );
+    }
+    if (existingContact.length > 0) {
+      return NextResponse.json(
+        { success: false, error: "This mobile number is already registered." },
         { status: 409 }
       );
     }
