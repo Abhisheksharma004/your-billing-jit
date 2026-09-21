@@ -43,94 +43,22 @@ import {
   Trash2
 } from "lucide-react";
 
-// Mock Tenant Data
-interface Tenant {
-  id: string;
-  name: string;
-  gstin: string;
-  city: string;
-  plan: "Enterprise" | "Growth" | "Starter";
-  users: number;
-  invoicesThisMonth: number;
-  mrr: string;
-  status: "Active" | "Trial" | "Suspended";
-  joinedDate: string;
+// Real Company Data Interface from MySQL
+interface Company {
+  id: number;
+  company_id: string;
+  company_name: string;
+  contact_person: string;
+  email: string;
+  contact_number: string;
+  whatsapp_updates?: number;
+  email_verified?: number;
+  status: "active" | "suspended" | "inactive";
+  trial_start: string;
+  trial_end: string;
+  created_at: string;
+  updated_at?: string;
 }
-
-const initialTenants: Tenant[] = [
-  {
-    id: "TNT-101",
-    name: "Apex Logistics India Pvt Ltd",
-    gstin: "27AABCA1234F1Z8",
-    city: "Mumbai, MH",
-    plan: "Enterprise",
-    users: 48,
-    invoicesThisMonth: 12450,
-    mrr: "₹14,999",
-    status: "Active",
-    joinedDate: "12 Jan 2025"
-  },
-  {
-    id: "TNT-102",
-    name: "Bharat Pharma Distributors",
-    gstin: "36AAECB5678P1ZQ",
-    city: "Hyderabad, TS",
-    plan: "Growth",
-    users: 18,
-    invoicesThisMonth: 6380,
-    mrr: "₹7,499",
-    status: "Active",
-    joinedDate: "04 Feb 2025"
-  },
-  {
-    id: "TNT-103",
-    name: "Surat TexFab Mills",
-    gstin: "24AABCS9988C1ZR",
-    city: "Surat, GJ",
-    plan: "Enterprise",
-    users: 32,
-    invoicesThisMonth: 9840,
-    mrr: "₹14,999",
-    status: "Active",
-    joinedDate: "18 Feb 2025"
-  },
-  {
-    id: "TNT-104",
-    name: "Delhi Auto Spares Hub",
-    gstin: "07AAACD4433D1ZS",
-    city: "Delhi NCR",
-    plan: "Starter",
-    users: 6,
-    invoicesThisMonth: 1210,
-    mrr: "₹2,999",
-    status: "Trial",
-    joinedDate: "02 Mar 2025"
-  },
-  {
-    id: "TNT-105",
-    name: "Chennai Tech Hardware Corp",
-    gstin: "33AABCC1122E1ZT",
-    city: "Chennai, TN",
-    plan: "Growth",
-    users: 22,
-    invoicesThisMonth: 4500,
-    mrr: "₹7,499",
-    status: "Active",
-    joinedDate: "28 Jan 2025"
-  },
-  {
-    id: "TNT-106",
-    name: "Jaipur Gemstone & Crafts Ltd",
-    gstin: "08AABCJ7766K1ZU",
-    city: "Jaipur, RJ",
-    plan: "Starter",
-    users: 4,
-    invoicesThisMonth: 890,
-    mrr: "₹2,999",
-    status: "Suspended",
-    joinedDate: "10 Jan 2025"
-  }
-];
 
 export default function SuperAdminDashboardPage() {
   const router = useRouter();
@@ -138,7 +66,13 @@ export default function SuperAdminDashboardPage() {
   const [adminData, setAdminData] = useState<{ id: number; name: string; username: string; email: string; role: string } | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
+  // Real DB Companies State
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [isTogglingCompanyId, setIsTogglingCompanyId] = useState<number | null>(null);
+  const [isDeletingCompanyId, setIsDeletingCompanyId] = useState<number | null>(null);
+  const [isCreatingCompany, setIsCreatingCompany] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "subscriptions" | "billing" | "gateways" | "audit" | "settings">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Trial" | "Suspended">("All");
@@ -158,9 +92,10 @@ export default function SuperAdminDashboardPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState("");
-  const [newGstin, setNewGstin] = useState("");
-  const [newCity, setNewCity] = useState("");
-  const [newPlan, setNewPlan] = useState<"Enterprise" | "Growth" | "Starter">("Growth");
+  const [newContactPerson, setNewContactPerson] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newContactNumber, setNewContactNumber] = useState("");
+  const [newStatus, setNewStatus] = useState<"active" | "suspended" | "inactive">("active");
 
   // DB Plans State
   const [plans, setPlans] = useState<any[]>([]);
@@ -182,66 +117,147 @@ export default function SuperAdminDashboardPage() {
   const [planDescription, setPlanDescription] = useState("");
   const [planFeatures, setPlanFeatures] = useState<string[]>([""]);
 
-  // Filtered tenants
-  const filteredTenants = tenants.filter((t) => {
+  // Filtered companies from real DB data
+  const filteredCompanies = companies.filter((c) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch = 
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.gstin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "All" || t.status === statusFilter;
+      (c.company_name && c.company_name.toLowerCase().includes(q)) ||
+      (c.company_id && c.company_id.toLowerCase().includes(q)) ||
+      (c.email && c.email.toLowerCase().includes(q)) ||
+      (c.contact_person && c.contact_person.toLowerCase().includes(q)) ||
+      (c.contact_number && c.contact_number.toLowerCase().includes(q));
+
+    const matchesStatus = 
+      statusFilter === "All" ||
+      (statusFilter === "Active" && c.status === "active") ||
+      (statusFilter === "Suspended" && c.status === "suspended") ||
+      (statusFilter === "Trial" && c.status === "active");
+
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreateTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCompanyName) return;
-
-    const newTenantItem: Tenant = {
-      id: `TNT-${Math.floor(100 + Math.random() * 900)}`,
-      name: newCompanyName,
-      gstin: newGstin || "27AABCZ9999P1ZZ",
-      city: newCity || "Mumbai, MH",
-      plan: newPlan,
-      users: newPlan === "Enterprise" ? 25 : newPlan === "Growth" ? 10 : 3,
-      invoicesThisMonth: 0,
-      mrr: newPlan === "Enterprise" ? "₹14,999" : newPlan === "Growth" ? "₹7,499" : "₹2,999",
-      status: "Active",
-      joinedDate: "Just now"
-    };
-
-    setTenants([newTenantItem, ...tenants]);
-    setNewCompanyName("");
-    setNewGstin("");
-    setNewCity("");
-    setIsAddModalOpen(false);
-    toast.success(`Company "${newCompanyName}" created successfully!`, {
-      title: "Success",
-      details: `Company: ${newCompanyName}\nGSTIN: ${newTenantItem.gstin}\nPlan: ${newPlan}\nCity: ${newTenantItem.city}\nCreated at: ${new Date().toLocaleString()}`,
-    });
+  const fetchCompanies = async () => {
+    try {
+      setIsLoadingCompanies(true);
+      const res = await fetch("/api/superadmin/companies");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.companies)) {
+        setCompanies(data.companies);
+      }
+    } catch (err) {
+      console.error("Failed to load companies:", err);
+    } finally {
+      setIsLoadingCompanies(false);
+    }
   };
 
-  const toggleTenantStatus = (id: string) => {
-    setTenants(tenants.map(t => {
-      if (t.id === id) {
-        const nextStatus = t.status === "Active" ? "Suspended" : "Active";
-        if (nextStatus === "Suspended") {
-          toast.warning(`Company "${t.name}" has been suspended!`, {
-            title: "Warning",
-            details: `Tenant ${t.id} suspended. E-Invoicing and user access temporarily revoked.`,
-          });
-        } else {
-          toast.success(`Company "${t.name}" is now active!`, {
-            title: "Success",
-            details: `Tenant ${t.id} re-activated with full access.`,
-          });
-        }
-        return {
-          ...t,
-          status: nextStatus
-        };
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCompanyName.trim()) return;
+
+    try {
+      setIsCreatingCompany(true);
+      const res = await fetch("/api/superadmin/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: newCompanyName.trim(),
+          contactPerson: newContactPerson.trim() || "Admin",
+          email: newEmail.trim(),
+          contactNumber: newContactNumber.trim() || "0000000000",
+          status: newStatus,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to create company");
       }
-      return t;
-    }));
+
+      toast.success(`Company "${newCompanyName}" created successfully!`, {
+        title: "Success",
+        details: `Company ID: ${data.companyId}\nCreated at: ${new Date().toLocaleString()}`,
+      });
+
+      setNewCompanyName("");
+      setNewContactPerson("");
+      setNewEmail("");
+      setNewContactNumber("");
+      setIsAddModalOpen(false);
+      await fetchCompanies();
+    } catch (err: any) {
+      toast.error(err.message || "Could not create company", {
+        title: "Create Error",
+      });
+    } finally {
+      setIsCreatingCompany(false);
+    }
+  };
+
+  const toggleCompanyStatus = async (id: number, currentStatus: string, companyName: string) => {
+    const nextStatus = currentStatus === "active" ? "suspended" : "active";
+    try {
+      setIsTogglingCompanyId(id);
+      const res = await fetch("/api/superadmin/companies", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: nextStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to update company status");
+      }
+
+      setCompanies((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: nextStatus as any } : c))
+      );
+
+      if (nextStatus === "suspended") {
+        toast.warning(`Company "${companyName}" has been suspended!`, {
+          title: "Suspended",
+          details: `Company ID: ${id} suspended. Access temporarily revoked.`,
+        });
+      } else {
+        toast.success(`Company "${companyName}" is now active!`, {
+          title: "Activated",
+          details: `Company ID: ${id} re-activated with full access.`,
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not update status", {
+        title: "Update Error",
+      });
+    } finally {
+      setIsTogglingCompanyId(null);
+    }
+  };
+
+  const handleDeleteCompany = async (id: number, companyName: string) => {
+    const ok = window.confirm(`Are you sure you want to delete "${companyName}" from the database? This action cannot be undone.`);
+    if (!ok) return;
+
+    try {
+      setIsDeletingCompanyId(id);
+      const res = await fetch(`/api/superadmin/companies?id=${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to delete company");
+      }
+
+      toast.success(`Company "${companyName}" deleted successfully!`, {
+        title: "Company Deleted",
+        details: "The company has been removed from MySQL database.",
+      });
+
+      await fetchCompanies();
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete company", {
+        title: "Delete Error",
+      });
+    } finally {
+      setIsDeletingCompanyId(null);
+    }
   };
 
   const fetchPlans = async () => {
@@ -261,6 +277,7 @@ export default function SuperAdminDashboardPage() {
 
   useEffect(() => {
     fetchPlans();
+    fetchCompanies();
   }, []);
 
   const openAddPlanModal = () => {
@@ -444,13 +461,13 @@ export default function SuperAdminDashboardPage() {
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    fetchPlans();
+    await Promise.all([fetchPlans(), fetchCompanies()]);
     toast.wait("Wait for the data import operation to complete", {
       title: "Wait",
-      duration: 1500,
-      details: "Reconnecting to NIC Gateway endpoints and recalculating live telemetry metrics...",
+      duration: 1000,
+      details: "Reconnecting to MySQL Database and refreshing live metrics...",
     });
     setTimeout(() => {
       setIsRefreshing(false);
@@ -459,9 +476,9 @@ export default function SuperAdminDashboardPage() {
       setLastSyncTime(timeStr);
       toast.success("All systems synchronized and operational!", {
         title: "Success",
-        details: `Sync time: ${timeStr}\nLatency: 114ms\nTotal tenants: ${tenants.length}`,
+        details: `Sync time: ${timeStr}\nTotal Companies: ${companies.length}`,
       });
-    }, 1500);
+    }, 1000);
   };
 
   // Nav item component helper
@@ -580,7 +597,7 @@ export default function SuperAdminDashboardPage() {
                 tabKey="tenants" 
                 label="Companies / Tenants" 
                 icon={Building2} 
-                badge={tenants.length} 
+                badge={companies.length} 
               />
               <NavItem tabKey="subscriptions" label="Subscription Plans" icon={CreditCard} />
               <NavItem tabKey="billing" label="Billing & Revenue" icon={FileText} />
@@ -956,11 +973,11 @@ export default function SuperAdminDashboardPage() {
               </div>
               <div className="mt-3">
                 <div className="text-2xl font-black text-slate-900 tracking-tight">
-                  {tenants.filter(t => t.status === "Active").length * 240 + 28}
+                  {companies.filter(c => c.status === "active").length}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-emerald-600">
                   <TrendingUp className="w-3 h-3" />
-                  <span>+12.4% vs last month</span>
+                  <span>{companies.length} Total Registered</span>
                 </div>
               </div>
             </div>
@@ -1034,7 +1051,7 @@ export default function SuperAdminDashboardPage() {
                     Registered Business Organizations
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Showing {filteredTenants.length} of {tenants.length} organizations registered on Your Billing Software.
+                    Showing {filteredCompanies.length} of {companies.length} organizations registered in MySQL database.
                   </p>
                 </div>
 
@@ -1061,102 +1078,135 @@ export default function SuperAdminDashboardPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="py-3 px-5">Company / Tenant</th>
-                      <th className="py-3 px-5">GSTIN</th>
-                      <th className="py-3 px-5">Plan</th>
-                      <th className="py-3 px-5">Users</th>
-                      <th className="py-3 px-5">Monthly Invoices</th>
-                      <th className="py-3 px-5">MRR</th>
+                      <th className="py-3 px-5">Company / ID</th>
+                      <th className="py-3 px-5">Contact Person</th>
+                      <th className="py-3 px-5">Email & Phone</th>
+                      <th className="py-3 px-5">Trial Period</th>
+                      <th className="py-3 px-5">Registered On</th>
                       <th className="py-3 px-5">Status</th>
-                      <th className="py-3 px-5 text-right">Quick Action</th>
+                      <th className="py-3 px-5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                    {filteredTenants.length === 0 ? (
+                    {isLoadingCompanies ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <RefreshCw className="w-6 h-6 animate-spin text-red-600" />
+                            <span className="font-semibold text-xs">Loading companies from MySQL database...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredCompanies.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
                           No companies found matching "{searchQuery}"
                         </td>
                       </tr>
                     ) : (
-                      filteredTenants.map((tenant) => (
-                        <tr key={tenant.id} className="hover:bg-slate-50/60 transition-colors">
-                          
-                          {/* Company Name & City */}
-                          <td className="py-3.5 px-5">
-                            <div className="font-bold text-slate-900">{tenant.name}</div>
-                            <div className="text-[11px] text-slate-400">{tenant.city} • ID: {tenant.id}</div>
-                          </td>
+                      filteredCompanies.map((company) => {
+                        const trialEndDate = new Date(company.trial_end);
+                        const today = new Date();
+                        const daysLeft = Math.ceil((trialEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        const isExpired = daysLeft < 0;
 
-                          {/* GSTIN */}
-                          <td className="py-3.5 px-5 font-mono text-[11px] font-semibold text-slate-600">
-                            {tenant.gstin}
-                          </td>
+                        return (
+                          <tr key={company.id} className="hover:bg-slate-50/60 transition-colors">
+                            
+                            {/* Company Name & 7-digit ID */}
+                            <td className="py-3.5 px-5">
+                              <div className="font-bold text-slate-900">{company.company_name}</div>
+                              <div className="text-[11px] font-mono text-red-600 font-semibold mt-0.5">
+                                ID: {company.company_id}
+                              </div>
+                            </td>
 
-                          {/* Plan */}
-                          <td className="py-3.5 px-5">
-                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border ${
-                              tenant.plan === "Enterprise"
-                                ? "bg-red-50 text-red-700 border-red-200"
-                                : tenant.plan === "Growth"
-                                ? "bg-amber-50 text-amber-700 border-amber-200"
-                                : "bg-slate-100 text-slate-700 border-slate-200"
-                            }`}>
-                              {tenant.plan}
-                            </span>
-                          </td>
+                            {/* Contact Person */}
+                            <td className="py-3.5 px-5">
+                              <div className="font-semibold text-slate-800">{company.contact_person}</div>
+                            </td>
 
-                          {/* Users */}
-                          <td className="py-3.5 px-5 font-medium">
-                            {tenant.users} seats
-                          </td>
+                            {/* Email & Phone */}
+                            <td className="py-3.5 px-5">
+                              <div className="font-medium text-slate-800">{company.email}</div>
+                              <div className="text-[11px] text-slate-500 mt-0.5">{company.contact_number}</div>
+                            </td>
 
-                          {/* Invoices */}
-                          <td className="py-3.5 px-5 font-semibold text-slate-800">
-                            {tenant.invoicesThisMonth.toLocaleString("en-IN")}
-                          </td>
+                            {/* Trial Period */}
+                            <td className="py-3.5 px-5">
+                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                14-Day Free Trial
+                              </span>
+                              <div className="text-[11px] text-slate-500 mt-0.5">
+                                {isExpired ? (
+                                  <span className="text-rose-600 font-semibold">Expired</span>
+                                ) : (
+                                  <span>{daysLeft} days left ({trialEndDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })})</span>
+                                )}
+                              </div>
+                            </td>
 
-                          {/* MRR */}
-                          <td className="py-3.5 px-5 font-bold text-slate-900">
-                            {tenant.mrr}
-                          </td>
+                            {/* Registration Date */}
+                            <td className="py-3.5 px-5 text-slate-600">
+                              {new Date(company.created_at).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </td>
 
-                          {/* Status */}
-                          <td className="py-3.5 px-5">
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                              tenant.status === "Active"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : tenant.status === "Trial"
-                                ? "bg-sky-50 text-sky-700 border border-sky-200"
-                                : "bg-rose-50 text-rose-700 border border-rose-200"
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                tenant.status === "Active"
-                                  ? "bg-emerald-500"
-                                  : tenant.status === "Trial"
-                                  ? "bg-sky-500"
-                                  : "bg-rose-500"
-                              }`}></span>
-                              {tenant.status}
-                            </span>
-                          </td>
+                            {/* Status */}
+                            <td className="py-3.5 px-5">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize ${
+                                company.status === "active"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : company.status === "suspended"
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-slate-100 text-slate-700 border border-slate-200"
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  company.status === "active"
+                                    ? "bg-emerald-500"
+                                    : company.status === "suspended"
+                                    ? "bg-rose-500"
+                                    : "bg-slate-400"
+                                }`}></span>
+                                {company.status}
+                              </span>
+                            </td>
 
-                          {/* Quick Action Button */}
-                          <td className="py-3.5 px-5 text-right">
-                            <button
-                              onClick={() => toggleTenantStatus(tenant.id)}
-                              className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
-                                tenant.status === "Active"
-                                  ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                                  : "text-emerald-600 hover:bg-emerald-50"
-                              }`}
-                            >
-                              {tenant.status === "Active" ? "Suspend" : "Activate"}
-                            </button>
-                          </td>
+                            {/* Quick Actions */}
+                            <td className="py-3.5 px-5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => toggleCompanyStatus(company.id, company.status, company.company_name)}
+                                  disabled={isTogglingCompanyId === company.id}
+                                  className={`px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                                    company.status === "active"
+                                      ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                                      : "text-emerald-600 hover:bg-emerald-50"
+                                  } disabled:opacity-50`}
+                                >
+                                  {isTogglingCompanyId === company.id
+                                    ? "Updating..."
+                                    : company.status === "active"
+                                    ? "Suspend"
+                                    : "Activate"}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteCompany(company.id, company.company_name)}
+                                  disabled={isDeletingCompanyId === company.id}
+                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+                                  title="Delete Company"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
 
-                        </tr>
-                      ))
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1164,8 +1214,8 @@ export default function SuperAdminDashboardPage() {
 
               {/* Table Footer */}
               <div className="p-4 bg-slate-50/60 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
-                <span>Showing {filteredTenants.length} organizations</span>
-                <span className="font-semibold text-slate-700">Multi-Tenant Isolation: Active (PostgreSQL Row Security)</span>
+                <span>Total {filteredCompanies.length} companies listed</span>
+                <span className="font-semibold text-slate-700">MySQL Database Storage</span>
               </div>
 
             </div>
@@ -1631,7 +1681,7 @@ export default function SuperAdminDashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateTenant} className="space-y-4 pt-4 text-xs">
+            <form onSubmit={handleCreateCompany} className="space-y-4 pt-4 text-xs">
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-700 block">
                   Company / Business Name<span className="text-red-600 font-bold">*</span>
@@ -1648,45 +1698,61 @@ export default function SuperAdminDashboardPage() {
 
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-700 block">
-                  GSTIN (Optional)
+                  Contact Person Name<span className="text-red-600 font-bold">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. 27AABCM5544N1ZX"
-                  value={newGstin}
-                  onChange={(e) => setNewGstin(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 font-mono text-slate-900"
+                  required
+                  placeholder="e.g. Abhishek Sharma"
+                  value={newContactPerson}
+                  onChange={(e) => setNewContactPerson(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-slate-900"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="font-semibold text-slate-700 block">
-                    City & State
+                    Business Email<span className="text-red-600 font-bold">*</span>
                   </label>
                   <input
-                    type="text"
-                    placeholder="e.g. Pune, MH"
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
+                    type="email"
+                    required
+                    placeholder="e.g. admin@mahavir.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-slate-900"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="font-semibold text-slate-700 block">
-                    Subscription Plan
+                    Contact Phone Number<span className="text-red-600 font-bold">*</span>
                   </label>
-                  <select
-                    value={newPlan}
-                    onChange={(e) => setNewPlan(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white text-slate-900"
-                  >
-                    <option value="Enterprise">Enterprise (₹14,999/mo)</option>
-                    <option value="Growth">Growth (₹7,499/mo)</option>
-                    <option value="Starter">Starter (₹2,999/mo)</option>
-                  </select>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 9876543210"
+                    value={newContactNumber}
+                    onChange={(e) => setNewContactNumber(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-slate-900"
+                  />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-700 block">
+                  Initial Status
+                </label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white text-slate-900"
+                >
+                  <option value="active">Active (Full Access)</option>
+                  <option value="suspended">Suspended (Access Revoked)</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-2">
@@ -1699,9 +1765,10 @@ export default function SuperAdminDashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  disabled={isCreatingCompany}
+                  className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  Create Company
+                  {isCreatingCompany ? "Creating..." : "Create Company"}
                 </button>
               </div>
             </form>

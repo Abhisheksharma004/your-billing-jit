@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import ErpCanvas from "@/components/ErpCanvas";
-import { 
-  ReceiptText, 
-  User, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Smartphone, 
+import {
+  ReceiptText,
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  Smartphone,
   CheckCircle2
 } from "lucide-react";
 
@@ -55,7 +55,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white font-sans selection:bg-red-500 selection:text-white">
-      
+
       {/* LEFT SECTION: Dynamic ERP Canvas (Changes on every reload) */}
       <div className="lg:w-[48%] min-h-[440px] lg:min-h-screen relative overflow-hidden bg-red-700">
         <ErpCanvas />
@@ -63,11 +63,11 @@ export default function LoginPage() {
 
       {/* RIGHT SECTION: Clean White Form */}
       <div className="lg:w-[52%] flex flex-col justify-between p-6 sm:p-12 lg:p-16 min-h-[600px] lg:min-h-screen">
-        
+
         <div className="hidden lg:block"></div>
 
         <div className="w-full max-w-md mx-auto my-auto space-y-6">
-          
+
           {/* Brand Logo */}
           <div>
             <Link href="/" className="inline-flex items-center gap-2.5 group focus:outline-none">
@@ -100,11 +100,11 @@ export default function LoginPage() {
           ) : !isOtpMode ? (
             /* Standard User ID & Password Form */
             <form onSubmit={handleLogin} className="space-y-4">
-              
+
               {/* User ID Field */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 block">
-                  Please enter your user id<span className="text-red-600 font-bold">*</span>
+                  Please enter your User ID or Email ID<span className="text-red-600 font-bold">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -115,7 +115,7 @@ export default function LoginPage() {
                     required
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    placeholder="User ID"
+                    placeholder="User ID or Email"
                     className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
                   />
                 </div>
@@ -160,8 +160,8 @@ export default function LoginPage() {
                   <span>Remember me on this device</span>
                 </label>
 
-                <a 
-                  href="#" 
+                <a
+                  href="#"
                   className="font-medium text-red-600 hover:text-red-700 hover:underline transition-colors"
                 >
                   Forgot password?
