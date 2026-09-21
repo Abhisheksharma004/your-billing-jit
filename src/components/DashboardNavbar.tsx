@@ -49,7 +49,8 @@ export type ActiveDashboardTab =
   | "payment"
   | "expense-income"
   | "other-documents"
-  | "reports";
+  | "reports"
+  | "settings";
 
 export interface DashboardNavbarProps {
   activeTab: ActiveDashboardTab;
@@ -452,7 +453,7 @@ export default function DashboardNavbar({
             <button
               onClick={() => {
                 setShowUserMenu(false);
-                toast.info("Opening Settings", { title: "Settings" });
+                router.push("/dashboard/settings");
               }}
               className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80 transition-all cursor-pointer group shadow-2xs"
             >

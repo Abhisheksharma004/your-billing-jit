@@ -19,7 +19,17 @@ import {
   X,
   Plus,
   TrendingUp,
-  ClipboardList
+  ClipboardList,
+  Building2,
+  Printer,
+  Landmark,
+  Percent,
+  Shield,
+  Bell,
+  Save,
+  Upload,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
