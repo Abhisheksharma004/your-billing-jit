@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ErpCanvas from "@/components/ErpCanvas";
 import {
   ReceiptText,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +33,9 @@ export default function LoginPage() {
     setTimeout(() => {
       setIsLoading(false);
       setIsSuccess(true);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 800);
     }, 1000);
   };
 
