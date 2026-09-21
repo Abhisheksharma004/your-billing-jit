@@ -36,6 +36,7 @@ import {
   Mail,
   BookOpen,
   MessageCircle,
+  Plus,
 } from "lucide-react";
 
 export type ActiveDashboardTab =
@@ -128,13 +129,11 @@ export default function DashboardNavbar({
                   setShowNotifications(false);
                   setShowUserMenu(false);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-white hover:bg-slate-50 text-red-600 font-bold text-xs sm:text-sm shadow-sm hover:shadow transition-all cursor-pointer"
+                className="h-8 px-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-white hover:bg-slate-50 text-red-600 font-bold text-xs shadow-xs hover:shadow transition-all cursor-pointer select-none"
               >
-                <div className="w-4 h-4 rounded-full border-1.5 border-red-600 flex items-center justify-center font-black leading-none text-xs">
-                  +
-                </div>
+                <Plus className="w-3.5 h-3.5 stroke-[3] text-red-600 shrink-0" />
                 <span>Create</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               </button>
 
               {/* Create Menu Dropdown */}
@@ -221,10 +220,10 @@ export default function DashboardNavbar({
                   setShowNotifications(false);
                   setShowUserMenu(false);
                 }}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/95 hover:bg-white text-slate-800 font-bold text-xs shadow-sm hover:shadow transition-all cursor-pointer"
+                className="h-8 px-3 hidden sm:inline-flex items-center justify-center gap-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-xs hover:shadow transition-all cursor-pointer select-none"
               >
                 <span>{selectedFY}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               </button>
 
               {/* FY Dropdown */}
