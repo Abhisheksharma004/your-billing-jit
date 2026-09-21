@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
       `INSERT INTO companies 
         (company_id, company_name, contact_person, email, contact_number, 
          password_hash, default_password, whatsapp_updates, email_verified, 
-         status, trial_start, trial_end) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)`,
+         is_first_login, status, trial_start, trial_end) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, ?, ?)`,
       [
         companyId,
         companyName.trim(),

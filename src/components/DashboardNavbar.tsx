@@ -56,6 +56,9 @@ export interface DashboardNavbarProps {
   onSelectTab: (tab: ActiveDashboardTab) => void;
   companyName?: string;
   userName?: string;
+  userEmail?: string;
+  companyId?: string;
+  trialEnd?: string;
   selectedFY?: string;
   onChangeFY?: (fy: string) => void;
   onOpenQuickModal?: (type: "invoice" | "customer" | "product" | "payment" | "expense") => void;
@@ -66,8 +69,11 @@ export interface DashboardNavbarProps {
 export default function DashboardNavbar({
   activeTab,
   onSelectTab,
-  companyName = "Viros Entrepreneurs IT Solutions Private Limited",
-  userName = "Abhishek Sharma",
+  companyName = "",
+  userName = "",
+  userEmail,
+  companyId,
+  trialEnd,
   selectedFY = "F.Y. 2026-2027",
   onChangeFY,
   onOpenQuickModal,
@@ -93,10 +99,28 @@ export default function DashboardNavbar({
     return () => window.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout API error:", e);
+    }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("active_company_name");
+      localStorage.removeItem("active_user_name");
+      localStorage.removeItem("active_company_id");
+      localStorage.removeItem("active_user_email");
+    }
     toast.info("Logged out successfully.", { title: "Session Closed" });
-    router.push("/login");
+    router.replace("/login");
   };
+
+  // Calculate dynamic trial days remaining
+  const trialDaysRemaining = React.useMemo(() => {
+    if (!trialEnd) return 14;
+    const diff = new Date(trialEnd).getTime() - new Date().getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [trialEnd]);
 
   return (
     <div className="sticky top-0 z-40 w-full">
@@ -106,13 +130,24 @@ export default function DashboardNavbar({
       <header className="bg-[#dc2626] text-white py-2 shadow-sm">
         <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center justify-between gap-4">
 
-          {/* Left: Company Name & Brand */}
+          {/* Left: Company Name & Company ID Subtitle */}
           <div className="flex items-center min-w-0">
             <Link
               href="/dashboard"
-              className="text-white hover:text-red-100 transition-colors shrink-0 font-bold text-sm sm:text-base tracking-tight truncate max-w-[320px] lg:max-w-[550px]"
+              suppressHydrationWarning
+              className="text-white hover:text-red-100 transition-colors flex flex-col justify-center min-w-0 max-w-[320px] lg:max-w-[550px]"
             >
-              {companyName}
+              <span className="font-black text-lg sm:text-xl tracking-tight truncate leading-tight">
+                {companyName}
+              </span>
+              {companyId && (
+                <span
+                  suppressHydrationWarning
+                  className="text-xs sm:text-[13px] font-medium text-red-100/90 font-mono tracking-wide leading-none mt-0.5 truncate"
+                >
+                  {companyId}
+                </span>
+              )}
             </Link>
           </div>
 
@@ -241,8 +276,8 @@ export default function DashboardNavbar({
                         toast.success(`Active Financial Year changed to ${fy}`);
                       }}
                       className={`w-full text-left px-3.5 py-2 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${selectedFY === fy
-                          ? "bg-red-50 text-red-600 font-bold"
-                          : "hover:bg-slate-50 text-slate-700"
+                        ? "bg-red-50 text-red-600 font-bold"
+                        : "hover:bg-slate-50 text-slate-700"
                         }`}
                     >
                       <span>{fy}</span>
@@ -258,8 +293,8 @@ export default function DashboardNavbar({
               onClick={onToggleCalculator}
               title="Quick Calculator"
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${showCalculator
-                  ? "bg-white text-[#dc2626]"
-                  : "bg-white/15 hover:bg-white/25 text-white"
+                ? "bg-white text-[#dc2626]"
+                : "bg-white/15 hover:bg-white/25 text-white"
                 }`}
             >
               <Calculator className="w-4 h-4" />
@@ -335,26 +370,27 @@ export default function DashboardNavbar({
       {/* ========================================================================= */}
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99998] transition-opacity duration-300 ease-in-out ${
-          showUserMenu ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99998] transition-opacity duration-300 ease-in-out ${showUserMenu ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
         onClick={() => setShowUserMenu(false)}
       />
 
       {/* Side Panel Drawer - Smooth Right Slide In */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-sm sm:max-w-md bg-white z-[99999] shadow-[-10px_0_30px_rgba(0,0,0,0.15)] flex flex-col will-change-transform transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          showUserMenu ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-90 pointer-events-none"
-        }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-sm sm:max-w-md bg-white z-[99999] shadow-[-10px_0_30px_rgba(0,0,0,0.15)] flex flex-col will-change-transform transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${showUserMenu ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-90 pointer-events-none"
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center font-bold text-sm shrink-0 ring-2 ring-red-200">
+            <div
+              suppressHydrationWarning
+              className="w-10 h-10 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center font-bold text-sm shrink-0 ring-2 ring-red-200"
+            >
               {userName ? userName.charAt(0).toUpperCase() : "U"}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0" suppressHydrationWarning>
               <h3 className="text-sm font-extrabold text-slate-900 truncate">{userName}</h3>
               <p className="text-[11px] text-slate-500 truncate">{companyName}</p>
             </div>
@@ -370,31 +406,45 @@ export default function DashboardNavbar({
         {/* Drawer Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
-          {/* 1. PLAN & CREDIT SECTION */}
-          <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100">
+          {/* 1. PLAN & ACCOUNT INFO SECTION */}
+          <div className="bg-white rounded-lg border border-slate-200 divide-y divide-slate-100 shadow-2xs">
             <div className="flex items-center justify-between p-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
                   <ClipboardList className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-bold text-slate-800">Plan</span>
+                <span className="text-xs font-bold text-slate-800">Account Plan</span>
               </div>
-              <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md">
-                Premium
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md">
+                14-Day Free Trial
               </span>
             </div>
 
             <div className="flex items-center justify-between p-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                   <Coins className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-bold text-slate-800">Credit</span>
+                <span className="text-xs font-bold text-slate-800">Trial Validity</span>
               </div>
               <span className="text-xs font-extrabold text-slate-900">
-                473
+                {trialDaysRemaining} Days Left
               </span>
             </div>
+
+            {companyId && (
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">Company ID</span>
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md">
+                  {companyId}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 2. THREE ACTION BUTTONS (ICONS ON LEFT SIDE MATCHING NAVBAR) */}
@@ -582,8 +632,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("dashboard")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "dashboard"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <LayoutDashboard className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "dashboard" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -594,8 +644,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("customer-vendor")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "customer-vendor"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <Users className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "customer-vendor" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -606,8 +656,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("products-services")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "products-services"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <Package className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "products-services" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -618,8 +668,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("quotation-estimate")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "quotation-estimate"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <ClipboardList className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "quotation-estimate" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -630,8 +680,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("sale-invoice")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "sale-invoice"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <Receipt className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "sale-invoice" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -642,8 +692,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("purchase-invoice")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "purchase-invoice"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <ShoppingCart className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "purchase-invoice" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -654,8 +704,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("payment")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "payment"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <IndianRupee className={`w-4 h-4 shrink-0 stroke-[2.2] ${activeTab === "payment" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -666,8 +716,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("expense-income")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "expense-income"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <ArrowDownUp className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "expense-income" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -678,8 +728,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("other-documents")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "other-documents"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <Files className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "other-documents" ? "text-[#dc2626]" : "text-slate-500"}`} />
@@ -690,8 +740,8 @@ export default function DashboardNavbar({
           <button
             onClick={() => onSelectTab("reports")}
             className={`flex items-center gap-2 py-3 px-3.5 sm:px-4 text-center transition-all cursor-pointer border-b-2 border-r border-slate-200 ${activeTab === "reports"
-                ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
-                : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
+              ? "border-b-[#dc2626] text-[#dc2626] font-bold bg-red-50/30"
+              : "border-b-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 font-medium"
               }`}
           >
             <BarChart3 className={`w-4 h-4 shrink-0 stroke-[2] ${activeTab === "reports" ? "text-[#dc2626]" : "text-slate-500"}`} />

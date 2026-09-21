@@ -7,6 +7,7 @@ const SECRET_KEY = new TextEncoder().encode(
 );
 
 export const SUPERADMIN_COOKIE_NAME = "superadmin_session";
+export const TENANT_COOKIE_NAME = "tenant_session";
 
 /**
  * Hash a plain text password using bcrypt
@@ -35,6 +36,23 @@ export async function signSessionToken(payload: {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("24h")
+    .sign(SECRET_KEY);
+}
+
+/**
+ * Sign a JWT token for authenticated tenant / company user
+ */
+export async function signTenantSessionToken(payload: {
+  id: number;
+  companyId: string;
+  companyName: string;
+  email: string;
+  contactPerson: string;
+}): Promise<string> {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
     .sign(SECRET_KEY);
 }
 

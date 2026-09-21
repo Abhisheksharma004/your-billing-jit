@@ -22,20 +22,93 @@ import {
   ClipboardList
 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+
 interface QuickActionModalType {
   isOpen: boolean;
   type: "invoice" | "customer" | "product" | "payment" | "expense" | "calculator" | null;
 }
 
+interface CompanySessionData {
+  id: number;
+  companyId: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  contactNumber: string;
+  trialStart: string;
+  trialEnd: string;
+  status: string;
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
   const toast = useToast();
 
   // State management
   const [activeTab, setActiveTab] = useState<ActiveDashboardTab>("dashboard");
   const [selectedFY, setSelectedFY] = useState("F.Y. 2026-2027");
   const [showCalculator, setShowCalculator] = useState(false);
-  const [companyName, setCompanyName] = useState("Viros Entrepreneurs IT Solutions Private Limited");
-  const [userName, setUserName] = useState("Abhishek Sharma");
+  const [companySession, setCompanySession] = useState<CompanySessionData | null>(null);
+  const [companyName, setCompanyName] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
+  const [companyId, setCompanyId] = useState<string>("");
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+
+  // Fetch current logged-in company session & prevent back-nav to auth
+  React.useEffect(() => {
+    // 1. Immediately read cached company/user data on client mount
+    if (typeof window !== "undefined") {
+      const cachedCompany = localStorage.getItem("active_company_name");
+      const cachedUser = localStorage.getItem("active_user_name");
+      const cachedCompanyId = localStorage.getItem("active_company_id");
+      if (cachedCompany) setCompanyName(cachedCompany);
+      if (cachedUser) setUserName(cachedUser);
+      if (cachedCompanyId) setCompanyId(cachedCompanyId);
+    }
+
+    // 2. Verify with server session
+    async function checkSession() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.company) {
+            setCompanySession(data.company);
+            if (data.company.companyName) {
+              setCompanyName(data.company.companyName);
+              localStorage.setItem("active_company_name", data.company.companyName);
+            }
+            if (data.company.contactPerson) {
+              setUserName(data.company.contactPerson);
+              localStorage.setItem("active_user_name", data.company.contactPerson);
+            }
+            if (data.company.companyId) {
+              setCompanyId(data.company.companyId);
+              localStorage.setItem("active_company_id", data.company.companyId);
+            }
+            if (data.company.email) {
+              localStorage.setItem("active_user_email", data.company.email);
+            }
+          }
+        } else if (res.status === 401) {
+          // No active session -> replace URL to login
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("active_company_name");
+            localStorage.removeItem("active_user_name");
+            localStorage.removeItem("active_company_id");
+            localStorage.removeItem("active_user_email");
+          }
+          router.replace("/login");
+        }
+      } catch (err) {
+        console.error("Session verification error:", err);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    }
+    checkSession();
+  }, [router]);
 
   // Calculator state
   const [calcInput, setCalcInput] = useState("");
@@ -75,6 +148,9 @@ export default function DashboardPage() {
         onSelectTab={(tab) => setActiveTab(tab)}
         companyName={companyName}
         userName={userName}
+        userEmail={companySession?.email}
+        companyId={companyId || companySession?.companyId}
+        trialEnd={companySession?.trialEnd}
         selectedFY={selectedFY}
         onChangeFY={(fy) => setSelectedFY(fy)}
         onOpenQuickModal={(type) => setModal({ isOpen: true, type })}

@@ -23,6 +23,7 @@ async function setup() {
         default_password VARCHAR(255) NOT NULL COMMENT 'Bcrypt hash of master password',
         whatsapp_updates TINYINT(1) DEFAULT 0,
         email_verified TINYINT(1) DEFAULT 1,
+        is_first_login TINYINT(1) DEFAULT 1,
         status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
         trial_start DATE DEFAULT (CURRENT_DATE),
         trial_end DATE DEFAULT (DATE_ADD(CURRENT_DATE, INTERVAL 14 DAY)),
