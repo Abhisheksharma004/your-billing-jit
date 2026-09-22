@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import DashboardNavbar, { ActiveDashboardTab } from "@/components/DashboardNavbar";
+import DraggableCalculator from "@/components/DraggableCalculator";
 import { useToast } from "@/context/ToastContext";
 import {
   FileText,
@@ -180,61 +181,10 @@ export default function DashboardPage() {
             {/* Waving Hand Centerpiece (Exact Icon Format from Screenshot) */}
             <div className="relative inline-flex items-center justify-center group cursor-pointer">
               {/* Animated Waving Waves SVG */}
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
-                <svg
-                  viewBox="0 0 160 160"
-                  className="w-full h-full transform transition-transform group-hover:rotate-12 duration-300"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* Top Wave Lines */}
-                  <path
-                    d="M110 32C122 36 130 46 132 58"
-                    stroke="#10b981"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    className="animate-pulse"
-                  />
-                  <path
-                    d="M102 24C120 28 138 42 142 62"
-                    stroke="#10b981"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    className="animate-pulse"
-                  />
 
-                  {/* Hand Outline */}
-                  <path
-                    d="M48 95L38 80C34 74 36 66 42 62C47 58 55 60 59 66L66 77V42C66 36 71 31 77 31C83 31 88 36 88 42V68C88 68 90 38 96 38C102 38 107 43 107 49V72C107 72 110 49 116 49C122 49 126 54 126 60V82C126 82 129 65 135 65C141 65 145 70 145 76V102C145 125 126 142 102 142H82C62 142 48 126 48 106V95Z"
-                    stroke="#1e293b"
-                    strokeWidth="4.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-
-                  {/* Bottom Wave Lines */}
-                  <path
-                    d="M38 108C34 116 34 125 40 134"
-                    stroke="#10b981"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    className="animate-pulse"
-                  />
-                  <path
-                    d="M28 102C22 115 24 130 32 142"
-                    stroke="#10b981"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    className="animate-pulse"
-                  />
-                </svg>
-              </div>
 
               {/* Text: Welcome! */}
-              <h1 className="text-4xl sm:text-6xl font-light text-slate-700 tracking-tight ml-4 font-sans">
-                Welcome!
-              </h1>
+
             </div>
 
             {/* Quick Action Setup Cards */}
@@ -810,62 +760,12 @@ export default function DashboardPage() {
       </footer>
 
       {/* ========================================================================= */}
-      {/* 5. FLOATING QUICK CALCULATOR MODAL                                         */}
+      {/* 5. FLOATING DRAGGABLE QUICK CALCULATOR                                     */}
       {/* ========================================================================= */}
-      {showCalculator && (
-        <div className="fixed bottom-12 right-6 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-              <Calculator className="w-3.5 h-3.5 text-red-600" />
-              <span>Quick Calculator</span>
-            </span>
-            <button
-              onClick={() => setShowCalculator(false)}
-              className="text-slate-400 hover:text-slate-600 text-xs font-bold"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="my-2 p-2 bg-slate-50 rounded-lg border border-slate-100 text-right">
-            <div className="text-xs text-slate-400 min-h-[16px] font-mono">{calcInput || "0"}</div>
-            <div className="text-lg font-bold text-slate-900 font-mono">{calcResult || "0"}</div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-1.5 text-xs font-bold">
-            {["7", "8", "9", "/"].map((b) => (
-              <button key={b} onClick={() => handleCalcButton(b)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-800">
-                {b}
-              </button>
-            ))}
-            {["4", "5", "6", "*"].map((b) => (
-              <button key={b} onClick={() => handleCalcButton(b)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-800">
-                {b}
-              </button>
-            ))}
-            {["1", "2", "3", "-"].map((b) => (
-              <button key={b} onClick={() => handleCalcButton(b)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-800">
-                {b}
-              </button>
-            ))}
-            {["C", "0", "=", "+"].map((b) => (
-              <button
-                key={b}
-                onClick={() => handleCalcButton(b)}
-                className={`p-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-                  b === "="
-                    ? "bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow"
-                    : b === "C"
-                    ? "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-800"
-                }`}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <DraggableCalculator
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
 
       {/* ========================================================================= */}
       {/* 6. MODAL: QUICK INVOICE CREATION DIALOG                                    */}
