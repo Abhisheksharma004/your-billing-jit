@@ -41,7 +41,17 @@ import {
   Minus,
   MoreVertical,
   Trash2,
-  X
+  X,
+  Folder,
+  Globe,
+  Mail,
+  UserPlus,
+  Download,
+  HardDrive,
+  KeyRound,
+  CreditCard,
+  History,
+  FileCheck
 } from "lucide-react";
 
 interface CompanySessionData {
@@ -73,12 +83,20 @@ export interface DispatchAddress {
 }
 
 export type SettingTabId =
-  // Account Settings
+  // Account Settings (Exact 13 tabs from user screenshot)
   | "membership"
   | "credits"
   | "login-security"
+  | "eway-bill-einvoice"
   | "whatsapp-options"
   | "business-profile"
+  | "staff-account"
+  | "go-drive"
+  | "digital-sign"
+  | "export-data"
+  | "activity-log"
+  | "email-options"
+  | "payment-gateway"
   // Application Settings
   | "general-options"
   | "product-stock"
@@ -252,6 +270,163 @@ export default function SettingsSeparatePage() {
   const [showUpiQr, setShowUpiQr] = useState(true);
   const [showSignStamp, setShowSignStamp] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  // 6. WhatsApp Options State
+  const [whatsappSendMode, setWhatsappSendMode] = useState<"web" | "direct" | "billing">("direct");
+  const [allowStaffWhatsapp, setAllowStaffWhatsapp] = useState(false);
+  const [whatsappSearchQuery, setWhatsappSearchQuery] = useState("");
+  const [showWhatsappSearchInput, setShowWhatsappSearchInput] = useState(false);
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+
+  // 7. Staff Account State
+  const [staffList, setStaffList] = useState([
+    { id: "st-1", name: "Abhishek Sharma (You)", email: "sales@virosentrepreneurs.com", role: "Super Admin", roleBadge: "bg-red-50 text-[#dc2626]", status: "Active", isPrimary: true },
+    { id: "st-2", name: "Rahul Verma", email: "rahul.v@virosentrepreneurs.com", role: "Accountant", roleBadge: "bg-blue-50 text-blue-700", status: "Active", isPrimary: false },
+    { id: "st-3", name: "Pooja Sharma", email: "pooja.sales@virosentrepreneurs.com", role: "Sales Executive", roleBadge: "bg-purple-50 text-purple-700", status: "Active", isPrimary: false },
+    { id: "st-4", name: "Rachana Singh", email: "customercare@virosentrepreneurs.com", role: "Support Lead", roleBadge: "bg-amber-50 text-amber-700", status: "Active", isPrimary: false },
+    { id: "st-5", name: "Rupesh Kumar", email: "info@virosentrepreneurs.com", role: "Billing Operator", roleBadge: "bg-slate-100 text-slate-700", status: "Active", isPrimary: false },
+  ]);
+
+  // Staff Account Drawer & Permission Matrix State
+  const [showStaffDrawer, setShowStaffDrawer] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [staffForm, setStaffForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    userId: "",
+    password: "",
+    confirmPassword: "",
+    isEnabled: true,
+    hasSchedule: false,
+    role: "Staff Member",
+  });
+  const [showStaffPass, setShowStaffPass] = useState(false);
+  const [showStaffConfirmPass, setShowStaffConfirmPass] = useState(false);
+
+  const initialStaffPermissions: Record<string, { view: boolean; add: boolean; edit: boolean; remove: boolean; onlyView?: boolean }> = {
+    "Dashboard": { view: true, add: false, edit: false, remove: false, onlyView: true },
+    "Customer / Vendor": { view: true, add: true, edit: true, remove: false },
+    "Product": { view: true, add: true, edit: true, remove: false },
+    "Price List": { view: true, add: true, edit: true, remove: false },
+    "Transport": { view: true, add: true, edit: true, remove: false },
+    "Additional Charges": { view: true, add: true, edit: true, remove: false },
+    "Sale Invoice": { view: true, add: true, edit: true, remove: false },
+    "Purchase Invoice": { view: true, add: true, edit: true, remove: false },
+    "Inward Payment Receipt": { view: true, add: true, edit: true, remove: false },
+    "Outward Payment Receipt": { view: true, add: true, edit: true, remove: false },
+    "Services Request": { view: true, add: true, edit: true, remove: false },
+  };
+
+  const [staffPermissions, setStaffPermissions] = useState(initialStaffPermissions);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const scheduleDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const scheduleTimeSlots = [
+    "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
+    "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+    "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+    "05:00 PM", "05:30 PM", "06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM",
+    "08:00 PM", "08:30 PM", "09:00 PM", "09:30 PM", "10:00 PM"
+  ];
+  const [staffSchedule, setStaffSchedule] = useState<Record<string, { startTime: string; endTime: string }>>({
+    Monday: { startTime: "", endTime: "" },
+    Tuesday: { startTime: "", endTime: "" },
+    Wednesday: { startTime: "", endTime: "" },
+    Thursday: { startTime: "", endTime: "" },
+    Friday: { startTime: "", endTime: "" },
+    Saturday: { startTime: "", endTime: "" },
+    Sunday: { startTime: "", endTime: "" },
+  });
+
+  const handleOpenAddStaff = () => {
+    setEditingStaffId(null);
+    setStaffForm({
+      name: "",
+      phone: "",
+      email: "",
+      userId: "",
+      password: "",
+      confirmPassword: "",
+      isEnabled: true,
+      hasSchedule: false,
+      role: "Staff Member",
+    });
+    setStaffPermissions(initialStaffPermissions);
+    setShowStaffDrawer(true);
+  };
+
+  const handleOpenEditStaff = (staff: typeof staffList[0]) => {
+    setEditingStaffId(staff.id);
+    setStaffForm({
+      name: staff.name.replace(" (You)", ""),
+      phone: "9871029141",
+      email: staff.email,
+      userId: staff.id.replace("st-", "staff_"),
+      password: "••••••••",
+      confirmPassword: "••••••••",
+      isEnabled: staff.status === "Active",
+      hasSchedule: false,
+      role: staff.role,
+    });
+    setShowStaffDrawer(true);
+  };
+
+  const handleToggleSelectAllPermissions = () => {
+    const allChecked = Object.values(staffPermissions).every(
+      (p) => p.view && (p.onlyView || (p.add && p.edit && p.remove))
+    );
+    const updated = { ...staffPermissions };
+    Object.keys(updated).forEach((k) => {
+      if (updated[k].onlyView) {
+        updated[k] = { ...updated[k], view: !allChecked };
+      } else {
+        updated[k] = {
+          view: !allChecked,
+          add: !allChecked,
+          edit: !allChecked,
+          remove: !allChecked,
+        };
+      }
+    });
+    setStaffPermissions(updated);
+  };
+
+  const handleSaveStaffAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffForm.name.trim()) {
+      toast.error("Please enter staff member name.");
+      return;
+    }
+    if (!staffForm.userId.trim()) {
+      toast.error("Please enter User ID.");
+      return;
+    }
+
+    if (editingStaffId) {
+      setStaffList((prev) =>
+        prev.map((s) =>
+          s.id === editingStaffId
+            ? { ...s, name: staffForm.name, email: staffForm.email || s.email, role: staffForm.role || s.role, status: staffForm.isEnabled ? "Active" : "Inactive" }
+            : s
+        )
+      );
+      toast.success(`Updated staff account for ${staffForm.name}`, { title: "Staff Account Updated" });
+    } else {
+      const newStaff = {
+        id: "st-" + Date.now(),
+        name: staffForm.name,
+        email: staffForm.email || `${staffForm.userId.toLowerCase()}@virosentrepreneurs.com`,
+        role: staffForm.role || "Staff Operator",
+        roleBadge: "bg-slate-100 text-slate-700",
+        status: staffForm.isEnabled ? "Active" : "Inactive",
+        isPrimary: false,
+      };
+      setStaffList((prev) => [...prev, newStaff]);
+      toast.success(`Created staff account for ${staffForm.name}`, { title: "Staff Account Created" });
+    }
+    setShowStaffDrawer(false);
+  };
 
   // Initial Load & Auth
   useEffect(() => {
@@ -569,13 +744,21 @@ export default function SettingsSeparatePage() {
     setShowDispatchModal(false);
   };
 
-  // Left Sidebar Definition (Exact groups & titles as screenshot with Brand Red theme)
+  // Left Sidebar Definition (Exact 13 tabs matching screenshot)
   const accountSettingsItems = [
     { id: "membership", label: "Membership", icon: Users },
     { id: "credits", label: "Credits", icon: Coins },
     { id: "login-security", label: "Login & Security", icon: Shield },
+    { id: "eway-bill-einvoice", label: "E-way Bill & E-Invoice", icon: Truck },
     { id: "whatsapp-options", label: "WhatsApp Options", icon: MessageCircle },
     { id: "business-profile", label: "Business Profile", icon: User },
+    { id: "staff-account", label: "Staff Account", icon: UserPlus },
+    { id: "go-drive", label: "Go Drive", icon: Folder },
+    { id: "digital-sign", label: "Digital Sign", icon: Edit3 },
+    { id: "export-data", label: "Export Data", icon: Upload },
+    { id: "activity-log", label: "Activity Log", icon: FileText },
+    { id: "email-options", label: "Email Options", icon: Mail },
+    { id: "payment-gateway", label: "Payment Gateway", icon: Globe },
   ];
 
   const applicationSettingsItems = [
@@ -923,119 +1106,197 @@ export default function SettingsSeparatePage() {
             )}
 
             {/* ───────────────────────────────────────────────────────────────── */}
-            {/* VIEW 3: LOGIN & SECURITY                                          */}
+            {/* VIEW 3: LOGIN & SECURITY (EXACT PIXEL-PERFECT FROM SCREENSHOTS)   */}
             {/* ───────────────────────────────────────────────────────────────── */}
             {activeTab === "login-security" && (
-              <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-6 sm:p-7 space-y-7 animate-in fade-in-50 duration-150">
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
 
-                {/* 1. User Detail */}
-                <div className="space-y-4">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-800">
-                    User Detail
-                  </h3>
+                {/* 1. Logged in Devices Card */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+                  <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100 bg-white">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                      Logged in Devices
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toast.success("Successfully logged out from all other active devices.", { title: "Sessions Terminated" });
+                      }}
+                      className="px-4 py-1.5 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Logout All Device
+                    </button>
+                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-[130px_minmax(0,360px)] items-center gap-y-3.5 sm:gap-x-4">
-                    <label className="text-xs font-semibold text-slate-600">
-                      User ID<span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginUserId}
-                      readOnly
-                      placeholder="VE8377929141"
-                      className="w-full px-3.5 py-2 rounded-md border border-slate-200 bg-slate-100/80 text-xs text-slate-600 font-medium cursor-not-allowed select-all focus:outline-none"
-                    />
-
-                    <label className="text-xs font-semibold text-slate-600">
-                      Full Name<span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginFullName}
-                      onChange={(e) => setLoginFullName(e.target.value)}
-                      placeholder="Abhishek Kumar Ranjan"
-                      className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
-                    />
-
-                    <label className="text-xs font-semibold text-slate-600">
-                      Phone<span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={loginPhone}
-                      onChange={(e) => setLoginPhone(e.target.value)}
-                      placeholder="7764936310"
-                      className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
-                    />
-
-                    <div className="sm:col-start-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleSaveUserDetail}
-                        disabled={isSaving}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60"
-                      >
-                        <Save className="w-3.5 h-3.5 shrink-0" />
-                        <span>Save</span>
-                      </button>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-600 font-semibold border-b border-slate-100">
+                          <th className="py-3 px-5 w-12 font-semibold">#</th>
+                          <th className="py-3 px-3 font-semibold">Name</th>
+                          <th className="py-3 px-3 font-semibold">Device</th>
+                          <th className="py-3 px-3 font-semibold">Browser</th>
+                          <th className="py-3 px-3 font-semibold">Platform</th>
+                          <th className="py-3 px-3 font-semibold">Last Log In</th>
+                          <th className="py-3 px-3 font-semibold">Location</th>
+                          <th className="py-3 px-5 text-right font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {[
+                          { id: 1, name: "", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "22-Sep-2026 12:09 PM", location: "Noida, Uttar Pradesh", isCurrent: true },
+                          { id: 2, name: "", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "22-Sep-2026 11:50 AM", location: "Noida, Uttar Pradesh", isCurrent: false },
+                          { id: 3, name: "Rachana Singh", device: "Desktop", browser: "Edge", platform: "Win10", lastLogin: "22-Sep-2026 11:04 AM", location: "Noida, Uttar Pradesh", isCurrent: false },
+                          { id: 4, name: "Rachana Singh", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "21-Sep-2026 5:22 PM", location: "Noida, Uttar Pradesh", isCurrent: false },
+                          { id: 5, name: "Rachana Singh", device: "Desktop", browser: "Edge", platform: "Win10", lastLogin: "02-Sep-2026 1:48 PM", location: "Noida, Uttar Pradesh", isCurrent: false },
+                          { id: 6, name: "Rachana Singh", device: "Desktop", browser: "Edge", platform: "Win10", lastLogin: "27-Aug-2026 10:43 AM", location: "Noida, Uttar Pradesh", isCurrent: false },
+                        ].map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3.5 px-5 text-slate-500 font-medium">{row.id}</td>
+                            <td className="py-3.5 px-3 font-semibold text-slate-800">{row.name || ""}</td>
+                            <td className="py-3.5 px-3 text-slate-600">{row.device}</td>
+                            <td className="py-3.5 px-3 text-slate-600">{row.browser}</td>
+                            <td className="py-3.5 px-3 text-slate-600">{row.platform}</td>
+                            <td className="py-3.5 px-3 text-slate-600 font-medium">{row.lastLogin}</td>
+                            <td className="py-3.5 px-3 text-slate-600 font-medium">{row.location}</td>
+                            <td className="py-3.5 px-5 text-right">
+                              {!row.isCurrent && (
+                                <button
+                                  type="button"
+                                  onClick={() => toast.success(`Logged out from ${row.platform} (${row.browser}) session.`)}
+                                  className="px-3 py-1 rounded-md border border-slate-200 bg-slate-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                                >
+                                  Logout
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
-                {/* Divider Line */}
-                <div className="border-t border-slate-100"></div>
+                {/* 2. Login Log Card */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-slate-100 bg-white">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                      Login Log
+                    </h3>
+                  </div>
 
-                {/* 2. Change Password */}
-                <div className="space-y-4">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-800">
-                    Change Password
-                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-600 font-semibold border-b border-slate-100">
+                          <th className="py-3 px-5 w-12 font-semibold">#</th>
+                          <th className="py-3 px-3 font-semibold">Staff ID</th>
+                          <th className="py-3 px-3 font-semibold">Device</th>
+                          <th className="py-3 px-3 font-semibold">Browser</th>
+                          <th className="py-3 px-3 font-semibold">Platform</th>
+                          <th className="py-3 px-3 font-semibold">Last Log In</th>
+                          <th className="py-3 px-5 font-semibold">Location</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {[
+                          { id: 1, staffId: "-", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "22-Sep-2026 12:09 PM", location: "Noida, Uttar Pradesh" },
+                          { id: 2, staffId: "-", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "22-Sep-2026 11:50 AM", location: "Noida, Uttar Pradesh" },
+                          { id: 3, staffId: "-", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "22-Sep-2026 11:14 AM", location: "Noida, Uttar Pradesh" },
+                          { id: 4, staffId: "8743839141", device: "Desktop", browser: "Edge", platform: "Win10", lastLogin: "22-Sep-2026 11:04 AM", location: "Noida, Uttar Pradesh" },
+                          { id: 5, staffId: "7290969141", device: "Desktop", browser: "Chrome", platform: "macOS", lastLogin: "22-Sep-2026 10:23 AM", location: "Noida, Uttar Pradesh" },
+                          { id: 6, staffId: "8743839141", device: "Desktop", browser: "Chrome", platform: "Win10", lastLogin: "21-Sep-2026 5:22 PM", location: "Noida, Uttar Pradesh" },
+                          { id: 7, staffId: "8743839141", device: "Desktop", browser: "Edge", platform: "Win10", lastLogin: "21-Sep-2026 4:21 PM", location: "Noida, Uttar Pradesh" },
+                        ].map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3.5 px-5 text-slate-500 font-medium">{row.id}</td>
+                            <td className="py-3.5 px-3 font-semibold text-slate-800">{row.staffId}</td>
+                            <td className="py-3.5 px-3 text-slate-600">{row.device}</td>
+                            <td className="py-3.5 px-3 text-slate-600">{row.browser}</td>
+                            <td className="py-3.5 px-3 text-slate-600">{row.platform}</td>
+                            <td className="py-3.5 px-3 text-slate-600 font-medium">{row.lastLogin}</td>
+                            <td className="py-3.5 px-5 text-slate-600 font-medium">{row.location}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-[130px_minmax(0,360px)] items-center gap-y-3.5 sm:gap-x-4">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Old Password<span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={oldPassword}
-                      onChange={(e) => setOldPassword(e.target.value)}
-                      placeholder="Enter your current password"
-                      className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
-                    />
+                {/* 3. User Detail & Password Management */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 sm:p-6 space-y-5">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                      User Profile & Password Security
+                    </h3>
+                  </div>
 
-                    <label className="text-xs font-semibold text-slate-600">
-                      Password<span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
-                    />
-
-                    <label className="text-xs font-semibold text-slate-600">
-                      Confirm Password<span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Enter confirm password"
-                      className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
-                    />
-
-                    <div className="sm:col-start-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleUpdatePassword}
-                        disabled={isSaving}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60"
-                      >
-                        <Lock className="w-3.5 h-3.5 shrink-0" />
-                        <span>Update Password</span>
-                      </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">
+                        User ID<span className="text-red-500 font-bold">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={loginUserId}
+                        readOnly
+                        className="w-full px-3.5 py-2 rounded-md border border-slate-200 bg-slate-100/80 text-xs text-slate-600 font-medium cursor-not-allowed select-all focus:outline-none"
+                      />
                     </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Full Name<span className="text-red-500 font-bold">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={loginFullName}
+                        onChange={(e) => setLoginFullName(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Old Password</label>
+                      <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">Confirm Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleUpdatePassword}
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Save Password
+                    </button>
                   </div>
                 </div>
 
@@ -1043,44 +1304,202 @@ export default function SettingsSeparatePage() {
             )}
 
             {/* ───────────────────────────────────────────────────────────────── */}
-            {/* VIEW 4: WHATSAPP OPTIONS                                          */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW 4: WHATSAPP OPTIONS (MATCHING SCREENSHOT + BRAND RED THEME)   */}
             {/* ───────────────────────────────────────────────────────────────── */}
             {activeTab === "whatsapp-options" && (
               <div className="space-y-6 animate-in fade-in-50 duration-150">
+
+                {/* 1. WhatsApp Settings Card */}
                 <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-800">WhatsApp Gateway & Alerts</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Automated invoice sending & payment reminders via official WhatsApp API.</p>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                      WhatsApp Settings
+                    </h3>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                      <div>
-                        <div className="text-xs font-bold text-slate-800">Auto-Send Invoices on WhatsApp</div>
-                        <div className="text-[11px] text-slate-500">Automatically send PDF invoice to client's mobile on invoice creation.</div>
+                  {/* 3 Radio Card Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    {/* Option 1: WhatsApp Web / App */}
+                    <div
+                      onClick={() => setWhatsappSendMode("web")}
+                      className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none ${whatsappSendMode === "web"
+                          ? "border-[#dc2626] bg-red-50/20 ring-1 ring-[#dc2626]"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                    >
+                      <div className="pt-0.5">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${whatsappSendMode === "web"
+                              ? "border-[#dc2626]"
+                              : "border-slate-300"
+                            }`}
+                        >
+                          {whatsappSendMode === "web" && (
+                            <div className="w-2 h-2 rounded-full bg-[#dc2626]" />
+                          )}
+                        </div>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={autoReminder}
-                        onChange={(e) => setAutoReminder(e.target.checked)}
-                        className="w-4 h-4 accent-red-600 cursor-pointer"
-                      />
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-slate-800">
+                          Send Via WhatsApp Web / App
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-medium">
+                          (Using Your Ph. Number)
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <div className="text-xs font-bold text-slate-800">Payment Due Reminders</div>
-                        <div className="text-[11px] text-slate-500">Send reminder message 3 days before invoice due date.</div>
+                    {/* Option 2: Direct WhatsApp (Default / Starred) */}
+                    <div
+                      onClick={() => setWhatsappSendMode("direct")}
+                      className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none ${whatsappSendMode === "direct"
+                          ? "border-[#dc2626] bg-red-50/20 ring-1 ring-[#dc2626]"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                    >
+                      <div className="pt-0.5">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${whatsappSendMode === "direct"
+                              ? "border-[#dc2626]"
+                              : "border-slate-300"
+                            }`}
+                        >
+                          {whatsappSendMode === "direct" && (
+                            <div className="w-2 h-2 rounded-full bg-[#dc2626]" />
+                          )}
+                        </div>
                       </div>
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-slate-800">
+                          Send Via Direct WhatsApp*
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-medium">
+                          (Using Your Ph. Number)
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Option 3: Go GST Bill WhatsApp */}
+                    <div
+                      onClick={() => setWhatsappSendMode("billing")}
+                      className={`p-3.5 rounded-lg border transition-all cursor-pointer flex items-start gap-3 select-none ${whatsappSendMode === "billing"
+                          ? "border-[#dc2626] bg-red-50/20 ring-1 ring-[#dc2626]"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                    >
+                      <div className="pt-0.5">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${whatsappSendMode === "billing"
+                              ? "border-[#dc2626]"
+                              : "border-slate-300"
+                            }`}
+                        >
+                          {whatsappSendMode === "billing" && (
+                            <div className="w-2 h-2 rounded-full bg-[#dc2626]" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-slate-800">
+                          Send Via Go GST Bill WhatsApp
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-medium">
+                          (From Go GST Bill&apos;s Ph. Number)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Staff Checkbox */}
+                  <div className="pt-2">
+                    <label className="inline-flex items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer select-none">
                       <input
                         type="checkbox"
-                        checked={true}
-                        onChange={() => { }}
-                        className="w-4 h-4 accent-red-600 cursor-pointer"
+                        checked={allowStaffWhatsapp}
+                        onChange={(e) => setAllowStaffWhatsapp(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 cursor-pointer accent-[#dc2626]"
                       />
-                    </div>
+                      <span>Allow staff member to send WhatsApp using connected phone number.</span>
+                    </label>
+                  </div>
+
+                  {/* Connect WhatsApp Button */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowWhatsappModal(true)}
+                      className="px-4 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Connect WhatsApp</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* 2. WhatsApp Log Card */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+                  <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100 bg-white">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                      WhatsApp Log
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {showWhatsappSearchInput ? (
+                        <div className="relative flex items-center">
+                          <input
+                            type="text"
+                            value={whatsappSearchQuery}
+                            onChange={(e) => setWhatsappSearchQuery(e.target.value)}
+                            placeholder="Search logs..."
+                            autoFocus
+                            className="w-44 sm:w-56 px-3 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowWhatsappSearchInput(false);
+                              setWhatsappSearchQuery("");
+                            }}
+                            className="absolute right-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowWhatsappSearchInput(true)}
+                          className="px-3 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <Search className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Search</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-600 font-semibold border-b border-slate-100">
+                          <th className="py-3 px-5 font-semibold">From</th>
+                          <th className="py-3 px-3 font-semibold">To</th>
+                          <th className="py-3 px-3 font-semibold">Status</th>
+                          <th className="py-3 px-3 font-semibold">Sent On</th>
+                          <th className="py-3 px-5 text-right font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-xs text-slate-400 font-medium">
+                            No results
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
             )}
 
@@ -1513,17 +1932,15 @@ export default function SettingsSeparatePage() {
                 {/* Right Slide-over Sidebar Drawer for Add / Edit Dispatch from Address */}
                 {/* Backdrop */}
                 <div
-                  className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99998] transition-opacity duration-300 ease-in-out ${
-                    showDispatchModal ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                  }`}
+                  className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99998] transition-opacity duration-300 ease-in-out ${showDispatchModal ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                    }`}
                   onClick={() => setShowDispatchModal(false)}
                 />
 
                 {/* Sliding Sidebar Panel */}
                 <div
-                  className={`fixed top-0 right-0 h-full w-full max-w-lg bg-white z-[99999] shadow-[-10px_0_30px_rgba(0,0,0,0.15)] flex flex-col will-change-transform transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                    showDispatchModal ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-90 pointer-events-none"
-                  }`}
+                  className={`fixed top-0 right-0 h-full w-full max-w-lg bg-white z-[99999] shadow-[-10px_0_30px_rgba(0,0,0,0.15)] flex flex-col will-change-transform transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${showDispatchModal ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-90 pointer-events-none"
+                    }`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Sidebar Header */}
@@ -1834,7 +2251,7 @@ export default function SettingsSeparatePage() {
                     <button
                       type="button"
                       onClick={() => handleSave("Bank Details")}
-                      className="px-4 py-2 rounded-lg bg-[#dc2626] hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
                     >
                       Save Bank Details
                     </button>
@@ -1867,7 +2284,7 @@ export default function SettingsSeparatePage() {
                     <button
                       type="button"
                       onClick={() => handleSave("Terms and Conditions")}
-                      className="px-4 py-2 rounded-lg bg-[#dc2626] hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
                     >
                       Save Terms
                     </button>
@@ -1877,9 +2294,935 @@ export default function SettingsSeparatePage() {
             )}
 
             {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: E-WAY BILL & E-INVOICE                                      */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "eway-bill-einvoice" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">E-way Bill & E-Invoice Settings</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Configure automated government GSP API credentials for 1-click IRN & E-Way Bill generation.</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      NIC Portal Active
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">GSP Username / GSTIN Portal User</label>
+                      <input
+                        type="text"
+                        defaultValue="Viros_GSP_004"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                        placeholder="Enter GSP Username"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">GSP Password</label>
+                      <input
+                        type="password"
+                        defaultValue="••••••••••••"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                        placeholder="Enter GSP Password"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                    <div className="text-xs font-bold text-slate-800">Automated Rules</div>
+                    <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer">
+                      <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-red-600 focus:ring-red-500" />
+                      <span>Auto generate E-Way bill when invoice total exceeds ₹ 50,000</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer">
+                      <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-red-600 focus:ring-red-500" />
+                      <span>Auto generate E-Invoice (IRN + Signed QR code) on saving B2B Tax Invoices</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer">
+                      <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-red-600 focus:ring-red-500" />
+                      <span>Print Government E-Invoice QR Code on PDF Invoices</span>
+                    </label>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => toast.success("NIC API Connection verified successfully!", { title: "API Connected" })}
+                      className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Test Connection
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSave("E-way Bill & E-Invoice")}
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Save Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: STAFF ACCOUNT (CLEAN & SIMPLE WITH VIEW & DELETE ACTIONS)   */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "staff-account" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">Staff Account Management</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Manage staff members, roles, permissions, and security access.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddStaff}
+                      className="px-3.5 py-1.5 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add New Staff</span>
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-500 font-semibold border-b border-slate-100">
+                          <th className="pb-3 font-semibold text-slate-600">Staff Member</th>
+                          <th className="pb-3 font-semibold text-slate-600">Email / Phone</th>
+                          <th className="pb-3 font-semibold text-slate-600">Role</th>
+                          <th className="pb-3 font-semibold text-slate-600">Status</th>
+                          <th className="pb-3 text-right font-semibold text-slate-600">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {staffList.map((staff) => (
+                          <tr key={staff.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3.5 font-bold text-slate-900">
+                              {staff.name}
+                            </td>
+                            <td className="py-3.5 text-slate-600">
+                              {staff.email}
+                            </td>
+                            <td className="py-3.5">
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${staff.roleBadge}`}>
+                                {staff.role}
+                              </span>
+                            </td>
+                            <td className="py-3.5">
+                              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700">
+                                {staff.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 text-right">
+                              {staff.isPrimary ? (
+                                <div className="flex items-center justify-end gap-3 font-medium">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditStaff(staff)}
+                                    className="text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                                  >
+                                    View
+                                  </button>
+                                  <span className="text-slate-400 font-normal">Primary</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-3.5 font-medium">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditStaff(staff)}
+                                    className="text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditStaff(staff)}
+                                    className="text-slate-600 hover:text-red-600 transition-colors cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setStaffList(staffList.filter((s) => s.id !== staff.id));
+                                      toast.success(`Removed staff member: ${staff.name}`, { title: "Staff Deleted" });
+                                    }}
+                                    className="text-red-600 hover:text-red-700 transition-colors cursor-pointer font-semibold"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Right Slide-over Sidebar Drawer for Create / Edit Staff Account */}
+                {/* Backdrop */}
+                <div
+                  className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99998] transition-opacity duration-300 ease-in-out ${
+                    showStaffDrawer ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                  }`}
+                  onClick={() => setShowStaffDrawer(false)}
+                />
+
+                {/* Sliding Sidebar Panel */}
+                <div
+                  className={`fixed top-0 right-0 h-full w-full max-w-2xl bg-white z-[99999] shadow-[-10px_0_30px_rgba(0,0,0,0.15)] flex flex-col will-change-transform transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    showStaffDrawer ? "translate-x-0 opacity-100 pointer-events-auto" : "translate-x-full opacity-90 pointer-events-none"
+                  }`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Sidebar Header */}
+                  <div className="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60 shrink-0">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">
+                        {editingStaffId ? "Edit Staff Account" : "Create Staff Account"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Configure staff user credentials, security status, and module permissions.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowStaffDrawer(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Sidebar Form Body (Scrollable) */}
+                  <form onSubmit={handleSaveStaffAccount} className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+
+                      {/* 1. Name */}
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                        <label className="font-semibold text-slate-700">
+                          Name <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={staffForm.name}
+                          onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                          placeholder="Enter staff full name"
+                          className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      {/* 2. Phone */}
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                        <label className="font-semibold text-slate-700">
+                          Phone
+                        </label>
+                        <input
+                          type="tel"
+                          value={staffForm.phone}
+                          onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                          placeholder="Enter phone number"
+                          className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      {/* 3. Email */}
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                        <label className="font-semibold text-slate-700">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={staffForm.email}
+                          onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                          placeholder="Enter email address"
+                          className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      {/* Credentials Divider Notice */}
+                      <div className="pt-2 pb-1 border-t border-slate-200/80 text-center">
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          The User ID and Password created below will be used by the staff member to log in.
+                        </span>
+                      </div>
+
+                      {/* 4. User ID */}
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                        <label className="font-semibold text-slate-700">
+                          User ID <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={staffForm.userId}
+                          onChange={(e) => setStaffForm({ ...staffForm, userId: e.target.value })}
+                          placeholder="Minimum 4 characters (letters and numbers)"
+                          className="w-full px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs placeholder:text-slate-400 font-mono"
+                        />
+                      </div>
+
+                      {/* 5. Password */}
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                        <label className="font-semibold text-slate-700">
+                          Password <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showStaffPass ? "text" : "password"}
+                            value={staffForm.password}
+                            onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                            placeholder="Min. 8 characters, including uppercase, lowercase, number & special character"
+                            className="w-full pr-10 px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs placeholder:text-slate-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowStaffPass(!showStaffPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showStaffPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 6. Confirm Password */}
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                        <label className="font-semibold text-slate-700">
+                          Confirm Password <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showStaffConfirmPass ? "text" : "password"}
+                            value={staffForm.confirmPassword}
+                            onChange={(e) => setStaffForm({ ...staffForm, confirmPassword: e.target.value })}
+                            placeholder="Enter the same password again"
+                            className="w-full pr-10 px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs placeholder:text-slate-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowStaffConfirmPass(!showStaffConfirmPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showStaffConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-200/80 pt-3 space-y-3">
+                        {/* 7. Enable Checkbox */}
+                        <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                          <label className="font-semibold text-slate-700">
+                            Enable
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={staffForm.isEnabled}
+                              onChange={(e) => setStaffForm({ ...staffForm, isEnabled: e.target.checked })}
+                              className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 cursor-pointer accent-[#dc2626]"
+                            />
+                            <span className="text-slate-700 font-medium">Only enabled staff accounts can log in</span>
+                          </label>
+                        </div>
+
+                        {/* 8. Staff Access Schedule Toggle & Weekly Schedule Table */}
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] items-center gap-1.5 sm:gap-4">
+                            <label className="font-semibold text-slate-700">
+                              Staff access schedule
+                            </label>
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => setStaffForm({ ...staffForm, hasSchedule: !staffForm.hasSchedule })}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  staffForm.hasSchedule ? "bg-[#dc2626]" : "bg-slate-300"
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                    staffForm.hasSchedule ? "translate-x-4" : "translate-x-0"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Access Schedule Table (Expanded when toggle is ON) */}
+                          {staffForm.hasSchedule && (
+                            <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs animate-in fade-in-50 duration-150">
+                              <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold">
+                                  <tr>
+                                    <th className="py-2.5 px-4 font-semibold text-slate-700 w-1/3">Day</th>
+                                    <th className="py-2.5 px-3 font-semibold text-slate-700 w-1/3">Start Time</th>
+                                    <th className="py-2.5 px-3 font-semibold text-slate-700 w-1/3">End Time</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                  {scheduleDays.map((day) => (
+                                    <tr key={day} className="hover:bg-slate-50/60 transition-colors">
+                                      <td className="py-2.5 px-4 font-medium text-slate-800">
+                                        {day}
+                                      </td>
+                                      <td className="py-2 px-3">
+                                        <select
+                                          value={staffSchedule[day]?.startTime || ""}
+                                          onChange={(e) =>
+                                            setStaffSchedule({
+                                              ...staffSchedule,
+                                              [day]: { ...staffSchedule[day], startTime: e.target.value },
+                                            })
+                                          }
+                                          className="w-full px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs"
+                                        >
+                                          <option value="">Select Start Time</option>
+                                          {scheduleTimeSlots.map((t) => (
+                                            <option key={t} value={t}>
+                                              {t}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </td>
+                                      <td className="py-2 px-3">
+                                        <select
+                                          value={staffSchedule[day]?.endTime || ""}
+                                          onChange={(e) =>
+                                            setStaffSchedule({
+                                              ...staffSchedule,
+                                              [day]: { ...staffSchedule[day], endTime: e.target.value },
+                                            })
+                                          }
+                                          className="w-full px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all shadow-2xs"
+                                        >
+                                          <option value="">Select End Time</option>
+                                          {scheduleTimeSlots.map((t) => (
+                                            <option key={t} value={t}>
+                                              {t}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 9. User Allowed To & Select All */}
+                        <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                          <div className="font-bold text-slate-800 text-xs">
+                            User Allowed to
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleToggleSelectAllPermissions}
+                            className="px-3 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                          >
+                            Select All
+                          </button>
+                        </div>
+
+                        {/* 10. Permissions Matrix Table */}
+                        <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-semibold">
+                              <tr>
+                                <th className="py-2.5 px-3">Section Name</th>
+                                <th className="py-2.5 px-3 text-center w-16">View</th>
+                                <th className="py-2.5 px-3 text-center w-16">Add</th>
+                                <th className="py-2.5 px-3 text-center w-16">Edit</th>
+                                <th className="py-2.5 px-3 text-center w-16">Remove</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-slate-700">
+                              {Object.entries(staffPermissions).map(([section, perms]) => (
+                                <tr key={section} className="hover:bg-slate-50/60">
+                                  <td className="py-2 px-3 font-medium text-slate-800">
+                                    {section}
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={perms.view}
+                                      onChange={(e) =>
+                                        setStaffPermissions({
+                                          ...staffPermissions,
+                                          [section]: { ...perms, view: e.target.checked },
+                                        })
+                                      }
+                                      className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 cursor-pointer accent-[#dc2626]"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    {!perms.onlyView && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perms.add}
+                                        onChange={(e) =>
+                                          setStaffPermissions({
+                                            ...staffPermissions,
+                                            [section]: { ...perms, add: e.target.checked },
+                                          })
+                                        }
+                                        className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 cursor-pointer accent-[#dc2626]"
+                                      />
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    {!perms.onlyView && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perms.edit}
+                                        onChange={(e) =>
+                                          setStaffPermissions({
+                                            ...staffPermissions,
+                                            [section]: { ...perms, edit: e.target.checked },
+                                          })
+                                        }
+                                        className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 cursor-pointer accent-[#dc2626]"
+                                      />
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    {!perms.onlyView && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perms.remove}
+                                        onChange={(e) =>
+                                          setStaffPermissions({
+                                            ...staffPermissions,
+                                            [section]: { ...perms, remove: e.target.checked },
+                                          })
+                                        }
+                                        className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 cursor-pointer accent-[#dc2626]"
+                                      />
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+
+                              {/* Expandable Accordions */}
+                              {[
+                                "Expense Income",
+                                "Other Documents",
+                                "Report",
+                                "Setting",
+                                "Other Options",
+                              ].map((sec) => {
+                                const isExpanded = !!expandedSections[sec];
+                                return (
+                                  <React.Fragment key={sec}>
+                                    <tr
+                                      onClick={() =>
+                                        setExpandedSections({
+                                          ...expandedSections,
+                                          [sec]: !isExpanded,
+                                        })
+                                      }
+                                      className="hover:bg-slate-50 cursor-pointer select-none bg-slate-50/30"
+                                    >
+                                      <td colSpan={4} className="py-2.5 px-3 font-semibold text-slate-800">
+                                        {sec}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right text-slate-400">
+                                        <span className="w-5 h-5 rounded border border-slate-200 inline-flex items-center justify-center text-xs font-bold text-slate-600 bg-white">
+                                          {isExpanded ? "−" : "+"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                    {isExpanded && (
+                                      <tr className="bg-red-50/10">
+                                        <td colSpan={5} className="p-3 text-xs text-slate-600">
+                                          <div className="flex items-center gap-4">
+                                            <label className="inline-flex items-center gap-2 cursor-pointer">
+                                              <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 accent-[#dc2626]" />
+                                              <span>View {sec}</span>
+                                            </label>
+                                            <label className="inline-flex items-center gap-2 cursor-pointer">
+                                              <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-[#dc2626] focus:ring-red-500 accent-[#dc2626]" />
+                                              <span>Manage {sec}</span>
+                                            </label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    {/* Sidebar Footer Buttons */}
+                    <div className="px-6 py-3.5 border-t border-slate-200/80 bg-slate-50/60 flex items-center justify-between shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowStaffDrawer(false)}
+                        className="px-4 py-2 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: GO DRIVE                                                    */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "go-drive" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-5">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800">Go Drive & Cloud Backup</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Automated secure cloud backup for all GST invoices, items, customers, and accounting vouchers.</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-800">Cloud Storage Usage</span>
+                      <span className="font-semibold text-slate-600">2.4 GB of 15.0 GB used (16%)</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div className="bg-[#dc2626] h-full w-[16%]"></div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg border border-slate-200 space-y-2">
+                      <div className="font-bold text-xs text-slate-800 flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-[#dc2626]" />
+                        <span>Google Drive Backup</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">Auto backup invoices daily to connected Google Drive folder.</p>
+                      <span className="inline-block text-[11px] font-bold text-slate-700">Connected: viros.backup@gmail.com</span>
+                    </div>
+                    <div className="p-4 rounded-lg border border-slate-200 space-y-2">
+                      <div className="font-bold text-xs text-slate-800 flex items-center gap-2">
+                        <HardDrive className="w-4 h-4 text-blue-500" />
+                        <span>Instant Local Zip Backup</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">Download complete encrypted database backup file to your computer.</p>
+                      <button
+                        type="button"
+                        onClick={() => toast.success("Preparing backup file download...", { title: "Backup Started" })}
+                        className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold cursor-pointer"
+                      >
+                        Download Backup
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: DIGITAL SIGN                                                */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "digital-sign" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800">Digital Signature (DSC) Integration</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Attach your Class 3 USB Token or PFX digital signature on PDF invoices automatically.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">Signer Full Name</label>
+                      <input
+                        type="text"
+                        defaultValue="Abhishek Sharma"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">DSC Certificate Validity</label>
+                      <input
+                        type="text"
+                        defaultValue="Valid till 14-Aug-2028"
+                        disabled
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                    <div className="text-xs font-bold text-slate-800">Signature Stamp Position</div>
+                    <div className="flex flex-wrap gap-4 text-xs text-slate-700">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="signPos" defaultChecked className="text-red-600 focus:ring-red-500" />
+                        <span>Bottom Right (Authorized Signatory)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="signPos" className="text-red-600 focus:ring-red-500" />
+                        <span>Bottom Left</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleSave("Digital Signature")}
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Save DSC Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: EXPORT DATA                                                 */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "export-data" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800">Export Business & GST Data</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Export records in Excel, CSV, or Government GST JSON format for CA filing.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {[
+                      { title: "GSTR-1 Filing Return", desc: "Outward supplies summary for portal filing", format: "Excel & JSON" },
+                      { title: "GSTR-3B Tax Summary", desc: "Monthly tax liability & ITC report", format: "Excel (.xlsx)" },
+                      { title: "Sales Invoices Register", desc: "All sales bills with item & tax breakup", format: "Excel / CSV" },
+                      { title: "Purchase Bills Register", desc: "Inward supply records with vendor GSTIN", format: "Excel / CSV" },
+                      { title: "Party Master (Customers/Vendors)", desc: "Contacts, addresses, GSTIN & balances", format: "Excel / CSV" },
+                      { title: "Products & Stock Master", desc: "Item list, HSN codes, rates, current stock", format: "Excel / CSV" },
+                    ].map((card, i) => (
+                      <div key={i} className="p-4 rounded-lg border border-slate-200 bg-white hover:border-red-400 hover:shadow-xs transition-all space-y-2.5">
+                        <div className="font-bold text-xs text-slate-800">{card.title}</div>
+                        <p className="text-[11px] text-slate-500">{card.desc}</p>
+                        <div className="pt-1 flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-semibold text-slate-400">{card.format}</span>
+                          <button
+                            type="button"
+                            onClick={() => toast.success(`Exporting ${card.title}...`)}
+                            className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-[#dc2626] font-bold text-[11px] cursor-pointer"
+                          >
+                            Export
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: ACTIVITY LOG                                                */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "activity-log" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">Activity & Audit Log</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Real-time trail of actions performed by your team.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Audit log refreshed")}
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+                    >
+                      Refresh Log
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-500 font-semibold border-b border-slate-100">
+                          <th className="pb-2.5 text-slate-600">Timestamp</th>
+                          <th className="pb-2.5 text-slate-600">User</th>
+                          <th className="pb-2.5 text-slate-600">Activity</th>
+                          <th className="pb-2.5 text-slate-600">Module</th>
+                          <th className="pb-2.5 text-slate-600">IP Address</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
+                        <tr>
+                          <td className="py-2.5 text-slate-500 font-mono">Today, 11:32 AM</td>
+                          <td className="py-2.5 font-bold text-slate-800">Abhishek Sharma</td>
+                          <td className="py-2.5 text-slate-700">Created Sale Invoice #INV-2026-0042</td>
+                          <td className="py-2.5"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700">Sales</span></td>
+                          <td className="py-2.5 text-slate-500 font-mono">103.21.124.5</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 text-slate-500 font-mono">Today, 10:15 AM</td>
+                          <td className="py-2.5 font-bold text-slate-800">Abhishek Sharma</td>
+                          <td className="py-2.5 text-slate-700">Updated Company Business Profile</td>
+                          <td className="py-2.5"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">Settings</span></td>
+                          <td className="py-2.5 text-slate-500 font-mono">103.21.124.5</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 text-slate-500 font-mono">Yesterday, 04:50 PM</td>
+                          <td className="py-2.5 font-bold text-slate-800">Rahul Verma</td>
+                          <td className="py-2.5 text-slate-700">Recorded Payment Entry ₹ 24,500</td>
+                          <td className="py-2.5"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700">Payment</span></td>
+                          <td className="py-2.5 text-slate-500 font-mono">115.99.18.21</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: EMAIL OPTIONS                                               */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "email-options" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800">Email Options & SMTP Configuration</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Configure your custom company email server for sending invoices, quotations, and payment reminders.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">SMTP Host Server</label>
+                      <input
+                        type="text"
+                        defaultValue="smtp.gmail.com"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">SMTP Port (SSL / TLS)</label>
+                      <input
+                        type="text"
+                        defaultValue="587"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">Sender Email Address</label>
+                      <input
+                        type="email"
+                        defaultValue="billing@virosentrepreneurs.com"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">SMTP App Password</label>
+                      <input
+                        type="password"
+                        defaultValue="••••••••••••••••"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => toast.success("Test email sent to billing@virosentrepreneurs.com", { title: "Email Verified" })}
+                      className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Send Test Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSave("Email Options")}
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Save SMTP Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {/* VIEW: PAYMENT GATEWAY                                             */}
+            {/* ───────────────────────────────────────────────────────────────── */}
+            {activeTab === "payment-gateway" && (
+              <div className="space-y-6 animate-in fade-in-50 duration-150">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800">Online Payment Gateway Integration</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Collect digital payments (UPI, Credit/Debit Cards, NetBanking) directly from your invoices.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">Payment Gateway Provider</label>
+                      <select className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium bg-white focus:ring-1 focus:ring-red-500">
+                        <option>Razorpay</option>
+                        <option>Cashfree Payments</option>
+                        <option>Paytm for Business</option>
+                        <option>UPI Dynamic QR Code Only</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">Razorpay Key ID</label>
+                      <input
+                        type="text"
+                        defaultValue="rzp_live_K82j19xKls0a9"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium font-mono focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs font-semibold text-slate-700">Razorpay Key Secret</label>
+                      <input
+                        type="password"
+                        defaultValue="••••••••••••••••••••••••"
+                        className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-medium font-mono focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-xs">
+                    <div className="font-bold text-slate-800">Auto-Reconciliation Status</div>
+                    <p className="text-slate-600">When your customer scans the QR code or clicks the payment link on your invoice, the payment is automatically verified and the invoice is marked as <strong>PAID</strong>.</p>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleSave("Payment Gateway")}
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Save Gateway Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ───────────────────────────────────────────────────────────────── */}
             {/* VIEW: FALLBACK / OTHER APPLICATION TABS                          */}
             {/* ───────────────────────────────────────────────────────────────── */}
-            {!["membership", "credits", "login-security", "whatsapp-options", "business-profile", "bank-details", "terms-conditions"].includes(activeTab) && (
+            {!["membership", "credits", "login-security", "eway-bill-einvoice", "whatsapp-options", "business-profile", "staff-account", "go-drive", "digital-sign", "export-data", "activity-log", "email-options", "payment-gateway", "bank-details", "terms-conditions"].includes(activeTab) && (
               <div className="space-y-6 animate-in fade-in-50 duration-150">
                 <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-5 space-y-4">
                   <div className="border-b border-slate-100 pb-3">
@@ -1900,7 +3243,7 @@ export default function SettingsSeparatePage() {
                     <button
                       type="button"
                       onClick={() => handleSave(activeTab.replace(/-/g, " "))}
-                      className="px-4 py-2 rounded-lg bg-[#dc2626] hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
                     >
                       Save Changes
                     </button>
@@ -2002,6 +3345,68 @@ export default function SettingsSeparatePage() {
           </span>
         </div>
       </footer>
+
+      {/* WhatsApp Connect Modal */}
+      {showWhatsappModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in-50 zoom-in-95">
+            <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-50 text-[#dc2626] flex items-center justify-center font-bold">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Connect WhatsApp</h4>
+                  <p className="text-[11px] text-slate-500">Scan QR to connect your WhatsApp device</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWhatsappModal(false)}
+                className="w-7 h-7 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 text-center space-y-4">
+              <div className="w-48 h-48 mx-auto bg-slate-50 border-2 border-dashed border-red-200 rounded-xl flex flex-col items-center justify-center p-4">
+                <QrCode className="w-32 h-32 text-slate-800" />
+                <span className="text-[10px] font-bold text-[#dc2626] uppercase tracking-wider mt-1">Live QR Code</span>
+              </div>
+
+              <div className="text-left bg-slate-50 rounded-lg p-3.5 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                <div className="font-bold text-slate-800">How to connect:</div>
+                <div className="text-[11px] leading-relaxed">
+                  1. Open WhatsApp on your phone.<br />
+                  2. Tap <strong>Linked Devices</strong> in menu or settings.<br />
+                  3. Tap <strong>Link a Device</strong> and point your camera at this screen.
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowWhatsappModal(false)}
+                  className="px-4 py-2 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWhatsappModal(false);
+                    toast.success("WhatsApp device linked successfully!", { title: "WhatsApp Connected" });
+                  }}
+                  className="px-5 py-2 rounded-md bg-[#dc2626] hover:bg-red-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                >
+                  I Have Scanned
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Draggable Quick Calculator */}
       <DraggableCalculator
