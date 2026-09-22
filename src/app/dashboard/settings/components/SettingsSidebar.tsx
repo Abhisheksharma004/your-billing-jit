@@ -47,7 +47,7 @@ export const accountSettingsNavItems = [
 
 export const applicationSettingsNavItems = [
   { id: "general-options", label: "General Options", href: "/dashboard/settings/general-options", icon: SettingsIcon },
-  { id: "product-stock", label: "Product & Stock", href: "/dashboard/settings/product-stock", icon: Package },
+  { id: "product-stock", label: "Product & Stock Options", href: "/dashboard/settings/product-stock", icon: Package },
   { id: "print-template", label: "Print Template", href: "/dashboard/settings/print-template", icon: Printer },
   { id: "print-options", label: "Print Options", href: "/dashboard/settings/print-options", icon: FileText },
   { id: "bank-details", label: "Bank Details", href: "/dashboard/settings/bank-details", icon: Landmark },
@@ -80,20 +80,18 @@ export default function SettingsSidebar() {
               <Link
                 key={item.id}
                 href={item.href}
-                className={`w-full text-left px-3.5 py-2.5 text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer relative ${
-                  isActive
+                className={`w-full text-left px-3.5 py-2.5 text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer relative ${isActive
                     ? "text-[#dc2626] font-bold bg-red-50/50"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-50/80"
-                }`}
+                  }`}
               >
                 {/* Active Line Indicator (Brand Red #dc2626) */}
                 {isActive && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#dc2626]"></div>
                 )}
                 <Icon
-                  className={`w-3.5 h-3.5 shrink-0 stroke-[2] ${
-                    isActive ? "text-[#dc2626]" : "text-slate-500"
-                  }`}
+                  className={`w-3.5 h-3.5 shrink-0 stroke-[2] ${isActive ? "text-[#dc2626]" : "text-slate-500"
+                    }`}
                 />
                 <span className="truncate flex-1">{item.label}</span>
               </Link>
@@ -115,20 +113,18 @@ export default function SettingsSidebar() {
               <Link
                 key={item.id}
                 href={item.href}
-                className={`w-full text-left px-3.5 py-2 text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer relative ${
-                  isActive
+                className={`w-full text-left px-3.5 py-2 text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer relative ${isActive
                     ? "text-[#dc2626] font-bold bg-red-50/50"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-50/80"
-                }`}
+                  }`}
               >
                 {/* Active Line Indicator */}
                 {isActive && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#dc2626]"></div>
                 )}
                 <Icon
-                  className={`w-3.5 h-3.5 shrink-0 stroke-[2] ${
-                    isActive ? "text-[#dc2626]" : "text-slate-500"
-                  }`}
+                  className={`w-3.5 h-3.5 shrink-0 stroke-[2] ${isActive ? "text-[#dc2626]" : "text-slate-500"
+                    }`}
                 />
                 <span className="truncate flex-1">{item.label}</span>
               </Link>
